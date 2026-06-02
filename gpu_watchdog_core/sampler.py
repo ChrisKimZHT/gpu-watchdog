@@ -5,6 +5,8 @@ from typing import Any, Dict, List
 
 import nvsmi
 
+from .models import ResourceUsage
+
 
 class ResourceSampler:
     @staticmethod
@@ -27,7 +29,7 @@ class ResourceSampler:
         return result
 
     @staticmethod
-    def memory_used_percent(path: str = "/proc/meminfo") -> float:
+    def memory_usage(path: str = "/proc/meminfo") -> ResourceUsage:
         values: Dict[str, float] = {}
         with open(path, "r", encoding="utf-8") as handle:
             for raw_line in handle:
@@ -51,14 +53,23 @@ class ResourceSampler:
             )
         if total <= 0:
             raise RuntimeError("MemTotal is missing from /proc/meminfo")
-        return (total - available) / total * 100.0
+        used = total - available
+        return ResourceUsage(
+            total=total * 1024,
+            used=used * 1024,
+            percent=used / total * 100.0,
+        )
 
     @staticmethod
-    def disk_used_percent(mount_point: str) -> float:
+    def disk_usage(mount_point: str) -> ResourceUsage:
         usage = shutil.disk_usage(mount_point)
         if usage.total <= 0:
             raise RuntimeError(f"disk total is zero for {mount_point}")
-        return usage.used / usage.total * 100.0
+        return ResourceUsage(
+            total=float(usage.total),
+            used=float(usage.used),
+            percent=usage.used / usage.total * 100.0,
+        )
 
     @staticmethod
     def gpus() -> List[Any]:

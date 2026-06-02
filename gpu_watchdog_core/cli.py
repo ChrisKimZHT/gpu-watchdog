@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from .constants import DEFAULT_INTERVAL_SECONDS
 from .log import configure_logging, logger
 from .sampler import ResourceSampler
-from .utils import pct
+from .utils import mib, pct, usage_text
 from .watchdog import Watchdog
 
 
@@ -28,14 +28,14 @@ def print_samples() -> None:
 
     logger.info("Memory:")
     try:
-        logger.info("  used_percent=%s", pct(ResourceSampler.memory_used_percent()))
+        logger.info("  %s", usage_text(ResourceSampler.memory_usage()))
     except Exception as exc:
         logger.info("  unavailable: %s", exc)
 
     logger.info("Disks:")
     for mount_point in ("/",):
         try:
-            logger.info("  %s used_percent=%s", mount_point, pct(ResourceSampler.disk_used_percent(mount_point)))
+            logger.info("  %s %s", mount_point, usage_text(ResourceSampler.disk_usage(mount_point)))
         except Exception as exc:
             logger.info("  %s unavailable: %s", mount_point, exc)
 
@@ -43,10 +43,12 @@ def print_samples() -> None:
     try:
         for gpu in ResourceSampler.gpus():
             logger.info(
-                "  id=%s uuid=%s compute=%s memory=%s",
+                "  id=%s uuid=%s compute=%s memory=%s / %s (%s)",
                 gpu.id,
                 gpu.uuid,
                 pct(float(gpu.gpu_util)),
+                mib(float(gpu.mem_used)),
+                mib(float(gpu.mem_total)),
                 pct(float(gpu.mem_util)),
             )
     except Exception as exc:

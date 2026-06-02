@@ -4,6 +4,13 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 
+@dataclass(frozen=True)
+class ResourceUsage:
+    total: float
+    used: float
+    percent: float
+
+
 @dataclass
 class TriggerState:
     active: bool = False

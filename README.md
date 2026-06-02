@@ -11,9 +11,10 @@ python3 gpu_watchdog.py --config config.example.json --once
 python3 gpu_watchdog.py --config config.example.json
 ```
 
-`--samples` prints the metrics visible on the current host. Long-running mode
-uses `interval_seconds` from the config. Logging verbosity is controlled by the
-config-level `log_level` option.
+`--samples` logs the metrics visible on the current host. Memory, disk, and GPU
+memory output includes used amount, total amount, and percentage. Long-running
+mode uses `interval_seconds` from the config. Logging verbosity is controlled by
+the config-level `log_level` option.
 
 ## Layout
 
@@ -64,13 +65,16 @@ fields such as `some.avg60`, `some.avg300`, or `full.avg10` can be configured
 when available on the host.
 
 Memory uses `/proc/meminfo` and monitors used percentage based on
-`MemAvailable`.
+`MemAvailable`. The sampler returns total bytes, used bytes, and used
+percentage.
 
-Disk rules monitor one mount point per rule with `shutil.disk_usage`.
+Disk rules monitor one mount point per rule with `shutil.disk_usage`. The
+sampler returns total bytes, used bytes, and used percentage.
 
 GPU rules use the provided `nvsmi.py` interface. Set `mode` to `compute`,
 `memory`, or `both`. Set `match` to `any` or `all` when multiple GPUs or
 multiple metrics are checked. GPU IDs are strings, matching `nvidia-smi` output.
+GPU memory descriptions include used memory, total memory, and percentage.
 
 Process rules watch whether a PID is still present in the `nvidia-smi` compute
 process list. This intentionally alerts when the process disappears, which means

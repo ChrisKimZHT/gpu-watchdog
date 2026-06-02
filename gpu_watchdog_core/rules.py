@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 from .log import logger
 from .models import RuleResult
 from .sampler import ResourceSampler
-from .utils import build_result, compare, event_kind, normalize_ids, pct, warn_skip
+from .utils import build_result, compare, event_kind, mib, normalize_ids, pct, usage_text, warn_skip
 
 
 class RuleEvaluator:
@@ -51,7 +51,7 @@ class RuleEvaluator:
         if not rules:
             return
         try:
-            value = ResourceSampler.memory_used_percent()
+            usage = ResourceSampler.memory_usage()
         except Exception as exc:
             warn_skip("memory", exc)
             return
@@ -59,9 +59,9 @@ class RuleEvaluator:
         for index, rule in enumerate(rules):
             threshold = float(rule["threshold"])
             kind = str(rule.get("kind", "busy"))
-            triggered = compare(kind, value, threshold)
-            title = str(rule.get("title", f"MEM {kind}: {pct(value)}"))
-            body = str(rule.get("body", f"Memory used is {pct(value)}, threshold {pct(threshold)}"))
+            triggered = compare(kind, usage.percent, threshold)
+            title = str(rule.get("title", f"MEM {kind}: {usage_text(usage)}"))
+            body = str(rule.get("body", f"Memory used is {usage_text(usage)}, threshold {pct(threshold)}"))
             rule_id = str(rule.get("id", f"mem:{index}:{kind}"))
             yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
 
@@ -70,15 +70,15 @@ class RuleEvaluator:
         for index, rule in enumerate(rules):
             mount_point = str(rule["mount"])
             try:
-                value = ResourceSampler.disk_used_percent(mount_point)
+                usage = ResourceSampler.disk_usage(mount_point)
             except Exception as exc:
                 warn_skip(f"disk {mount_point}", exc)
                 continue
             threshold = float(rule["threshold"])
             kind = str(rule.get("kind", "busy"))
-            triggered = compare(kind, value, threshold)
-            title = str(rule.get("title", f"Disk {kind}: {mount_point} {pct(value)}"))
-            body = str(rule.get("body", f"Disk {mount_point} used is {pct(value)}, threshold {pct(threshold)}"))
+            triggered = compare(kind, usage.percent, threshold)
+            title = str(rule.get("title", f"Disk {kind}: {mount_point} {usage_text(usage)}"))
+            body = str(rule.get("body", f"Disk {mount_point} used is {usage_text(usage)}, threshold {pct(threshold)}"))
             rule_id = str(rule.get("id", f"disk:{index}:{mount_point}:{kind}"))
             yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
 
@@ -151,7 +151,10 @@ class RuleEvaluator:
                 checks.append(
                     (
                         compare(kind, value, threshold),
-                        f"GPU {gpu.id} memory {pct(value)} threshold {pct(threshold)}",
+                        (
+                            f"GPU {gpu.id} memory {mib(float(gpu.mem_used))} / "
+                            f"{mib(float(gpu.mem_total))} ({pct(value)}) threshold {pct(threshold)}"
+                        ),
                     )
                 )
         return checks

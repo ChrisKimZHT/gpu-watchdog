@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, Optional
 
 from .constants import DEFAULT_COOLDOWN_SECONDS
 from .log import logger
-from .models import RuleResult
+from .models import ResourceUsage, RuleResult
 
 
 def warn_skip(scope: str, exc: BaseException) -> None:
@@ -13,6 +13,24 @@ def warn_skip(scope: str, exc: BaseException) -> None:
 
 def pct(value: float) -> str:
     return f"{value:.1f}%"
+
+
+def human_bytes(value: float) -> str:
+    units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"]
+    size = float(value)
+    for unit in units:
+        if abs(size) < 1024 or unit == units[-1]:
+            return f"{size:.1f}{unit}"
+        size /= 1024
+    return f"{size:.1f}PiB"
+
+
+def mib(value: float) -> str:
+    return f"{value:.1f}MiB"
+
+
+def usage_text(usage: ResourceUsage) -> str:
+    return f"{human_bytes(usage.used)} / {human_bytes(usage.total)} ({pct(usage.percent)})"
 
 
 def normalize_ids(values: Optional[Iterable[Any]]) -> Optional[set]:
