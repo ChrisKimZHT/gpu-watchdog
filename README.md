@@ -11,10 +11,9 @@ python3 gpu_watchdog.py --config config.example.json --once
 python3 gpu_watchdog.py --config config.example.json
 ```
 
-`--samples` prints the metrics visible on the current host. Long-running mode uses
-`interval_seconds` from the config unless `--interval` is provided.
-Use `--log-level DEBUG` or the config-level `log_level` option to adjust log
-verbosity.
+`--samples` prints the metrics visible on the current host. Long-running mode
+uses `interval_seconds` from the config. Logging verbosity is controlled by the
+config-level `log_level` option.
 
 ## Layout
 
@@ -36,7 +35,7 @@ Top-level options:
 - `interval_seconds`: polling interval.
 - `cooldown_seconds`: default minimum seconds between repeated triggers for the
   same active rule.
-- `log_level`: standard Python logging level. Can be overridden by `--log-level`.
+- `log_level`: standard Python logging level.
 - `log_notifications`: also emit notifications through the configured logger.
 - `notifiers.bark`: Bark settings. `isArchive`, `icon`, `group`, and `level`
   are passed through to Bark. Busy/process alerts force `level=critical`;

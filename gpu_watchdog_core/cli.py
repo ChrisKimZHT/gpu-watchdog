@@ -69,8 +69,6 @@ def print_samples() -> None:
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Zero-dependency Linux resource watchdog for GPU training hosts")
     parser.add_argument("--config", help="Path to JSON config file")
-    parser.add_argument("--interval", type=float, help="Override interval_seconds from config")
-    parser.add_argument("--log-level", help="Logging level: DEBUG, INFO, WARNING, ERROR")
     parser.add_argument("--once", action="store_true", help="Run one check and exit")
     parser.add_argument("--samples", action="store_true", help="Print current sampled metrics and exit")
     return parser.parse_args(argv)
@@ -78,7 +76,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv)
-    configure_logging(args.log_level or "INFO")
+    config = load_config(args.config) if args.config else {}
+    configure_logging(str(config.get("log_level", "INFO")))
 
     if args.samples:
         print_samples()
@@ -88,10 +87,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.error("--config is required unless --samples is used")
         return 2
 
-    config = load_config(args.config)
-    if not args.log_level:
-        configure_logging(str(config.get("log_level", "INFO")))
-    interval_seconds = float(args.interval or config.get("interval_seconds", DEFAULT_INTERVAL_SECONDS))
+    interval_seconds = float(config.get("interval_seconds", DEFAULT_INTERVAL_SECONDS))
     watchdog = Watchdog(config)
 
     if args.once:
