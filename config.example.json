@@ -1,0 +1,74 @@
+{
+  "interval_seconds": 30,
+  "cooldown_seconds": 300,
+  "stdout": true,
+  "notifiers": {
+    "bark": {
+      "enabled": false,
+      "server": "https://api.day.app",
+      "device_key": "REPLACE_WITH_YOUR_BARK_KEY",
+      "isArchive": "1",
+      "icon": "https://example.com/icon.png",
+      "group": "gpu-watchdog",
+      "level": "active"
+    }
+  },
+  "resources": {
+    "cpu": [
+      {
+        "id": "cpu-pressure-high",
+        "kind": "busy",
+        "metric": "some.avg10",
+        "threshold": 80,
+        "notify": true,
+        "command": "echo \"$GPU_WATCHDOG_TITLE $GPU_WATCHDOG_BODY\""
+      }
+    ],
+    "mem": [
+      {
+        "id": "mem-high",
+        "kind": "busy",
+        "threshold": 90,
+        "notify": true
+      }
+    ],
+    "disk": [
+      {
+        "id": "root-disk-high",
+        "kind": "busy",
+        "mount": "/",
+        "threshold": 90,
+        "notify": true
+      }
+    ],
+    "gpu": [
+      {
+        "id": "gpu0-memory-idle",
+        "kind": "idle",
+        "ids": ["0"],
+        "mode": "memory",
+        "threshold": 5,
+        "notify": true,
+        "command": "echo \"GPU 0 memory is idle\""
+      },
+      {
+        "id": "any-gpu-busy",
+        "kind": "busy",
+        "mode": "both",
+        "match": "any",
+        "compute_threshold": 95,
+        "memory_threshold": 95,
+        "notify": true
+      }
+    ]
+  },
+  "processes": [
+    {
+      "id": "train-pid-watch",
+      "name": "training",
+      "pid": 12345,
+      "notify": true,
+      "command": "echo \"training process disappeared\""
+    }
+  ]
+}
