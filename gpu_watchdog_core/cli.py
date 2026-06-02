@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from typing import Any, Dict, List, Optional
 
 from .constants import DEFAULT_INTERVAL_SECONDS
+from .log import configure_logging, logger
 from .sampler import ResourceSampler
 from .utils import pct
 from .watchdog import Watchdog
@@ -20,47 +20,57 @@ def load_config(path: str) -> Dict[str, Any]:
 
 
 def print_samples() -> None:
-    print("CPU pressure:")
+    logger.info("CPU pressure:")
     try:
-        print(json.dumps(ResourceSampler.cpu_pressure(), indent=2, sort_keys=True))
+        logger.info("\n%s", json.dumps(ResourceSampler.cpu_pressure(), indent=2, sort_keys=True))
     except Exception as exc:
-        print(f"  unavailable: {exc}")
+        logger.info("  unavailable: %s", exc)
 
-    print("Memory:")
+    logger.info("Memory:")
     try:
-        print(f"  used_percent={pct(ResourceSampler.memory_used_percent())}")
+        logger.info("  used_percent=%s", pct(ResourceSampler.memory_used_percent()))
     except Exception as exc:
-        print(f"  unavailable: {exc}")
+        logger.info("  unavailable: %s", exc)
 
-    print("Disks:")
+    logger.info("Disks:")
     for mount_point in ("/",):
         try:
-            print(f"  {mount_point} used_percent={pct(ResourceSampler.disk_used_percent(mount_point))}")
+            logger.info("  %s used_percent=%s", mount_point, pct(ResourceSampler.disk_used_percent(mount_point)))
         except Exception as exc:
-            print(f"  {mount_point} unavailable: {exc}")
+            logger.info("  %s unavailable: %s", mount_point, exc)
 
-    print("GPUs:")
+    logger.info("GPUs:")
     try:
         for gpu in ResourceSampler.gpus():
-            print(
-                f"  id={gpu.id} uuid={gpu.uuid} "
-                f"compute={pct(float(gpu.gpu_util))} memory={pct(float(gpu.mem_util))}"
+            logger.info(
+                "  id=%s uuid=%s compute=%s memory=%s",
+                gpu.id,
+                gpu.uuid,
+                pct(float(gpu.gpu_util)),
+                pct(float(gpu.mem_util)),
             )
     except Exception as exc:
-        print(f"  unavailable: {exc}")
+        logger.info("  unavailable: %s", exc)
 
-    print("GPU processes:")
+    logger.info("GPU processes:")
     try:
         for proc in ResourceSampler.gpu_processes():
-            print(f"  pid={proc.pid} gpu_id={proc.gpu_id} name={proc.process_name} used_memory={proc.used_memory}MB")
+            logger.info(
+                "  pid=%s gpu_id=%s name=%s used_memory=%sMB",
+                proc.pid,
+                proc.gpu_id,
+                proc.process_name,
+                proc.used_memory,
+            )
     except Exception as exc:
-        print(f"  unavailable: {exc}")
+        logger.info("  unavailable: %s", exc)
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Zero-dependency Linux resource watchdog for GPU training hosts")
     parser.add_argument("--config", help="Path to JSON config file")
     parser.add_argument("--interval", type=float, help="Override interval_seconds from config")
+    parser.add_argument("--log-level", help="Logging level: DEBUG, INFO, WARNING, ERROR")
     parser.add_argument("--once", action="store_true", help="Run one check and exit")
     parser.add_argument("--samples", action="store_true", help="Print current sampled metrics and exit")
     return parser.parse_args(argv)
@@ -68,16 +78,19 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv)
+    configure_logging(args.log_level or "INFO")
 
     if args.samples:
         print_samples()
         return 0
 
     if not args.config:
-        print("--config is required unless --samples is used", file=sys.stderr)
+        logger.error("--config is required unless --samples is used")
         return 2
 
     config = load_config(args.config)
+    if not args.log_level:
+        configure_logging(str(config.get("log_level", "INFO")))
     interval_seconds = float(args.interval or config.get("interval_seconds", DEFAULT_INTERVAL_SECONDS))
     watchdog = Watchdog(config)
 

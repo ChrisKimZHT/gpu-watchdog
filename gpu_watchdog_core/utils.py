@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import sys
 from typing import Any, Dict, Iterable, Optional
 
 from .constants import DEFAULT_COOLDOWN_SECONDS
+from .log import logger
 from .models import RuleResult
 
 
 def warn_skip(scope: str, exc: BaseException) -> None:
-    print(f"{scope} unavailable; skipping related rules: {exc}", file=sys.stderr)
+    logger.warning("%s unavailable; skipping related rules: %s", scope, exc)
 
 
 def pct(value: float) -> str:

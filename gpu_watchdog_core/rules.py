@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import sys
 from typing import Any, Dict, Iterable, List, Tuple
 
+from .log import logger
 from .models import RuleResult
 from .sampler import ResourceSampler
 from .utils import build_result, compare, event_kind, normalize_ids, pct, warn_skip
@@ -26,7 +26,7 @@ class RuleEvaluator:
         try:
             metrics = ResourceSampler.cpu_pressure()
         except FileNotFoundError:
-            print("/proc/pressure/cpu is not available on this host; skipping CPU rules", file=sys.stderr)
+            logger.warning("/proc/pressure/cpu is not available on this host; skipping CPU rules")
             return
         except Exception as exc:
             warn_skip("CPU pressure", exc)
@@ -38,7 +38,7 @@ class RuleEvaluator:
             kind = str(rule.get("kind", "busy"))
             value = metrics.get(metric)
             if value is None:
-                print(f"CPU pressure metric {metric!r} is unavailable; skipping", file=sys.stderr)
+                logger.warning("CPU pressure metric %r is unavailable; skipping", metric)
                 continue
             triggered = compare(kind, value, threshold)
             title = str(rule.get("title", f"CPU {kind}: {metric} {pct(value)}"))
@@ -102,7 +102,7 @@ class RuleEvaluator:
                 and (selected_uuids is None or str(gpu.uuid) in selected_uuids)
             ]
             if not selected:
-                print(f"GPU rule {rule.get('id', index)!r} matched no GPUs; skipping", file=sys.stderr)
+                logger.warning("GPU rule %r matched no GPUs; skipping", rule.get("id", index))
                 continue
 
             mode = str(rule.get("mode", "both"))

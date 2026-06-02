@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import sys
-import time
 import urllib.parse
 import urllib.request
 from typing import Any, Dict, Iterable, List
+
+from .log import logger, notification_logger
 
 
 class Notifier:
@@ -12,10 +12,9 @@ class Notifier:
         raise NotImplementedError
 
 
-class StdoutNotifier(Notifier):
+class LoggerNotifier(Notifier):
     def notify(self, title: str, body: str, level: str, kind: str) -> None:
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{timestamp}] {kind.upper()} level={level} {title}: {body}", flush=True)
+        notification_logger.info("%s level=%s %s: %s", kind.upper(), level, title, body)
 
 
 class BarkNotifier(Notifier):
@@ -49,7 +48,7 @@ class BarkNotifier(Notifier):
 
 class NotificationHub:
     def __init__(self, notifiers: Iterable[Notifier]) -> None:
-        self.notifiers = list(notifiers) or [StdoutNotifier()]
+        self.notifiers = list(notifiers) or [LoggerNotifier()]
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "NotificationHub":
@@ -60,8 +59,8 @@ class NotificationHub:
         if bark_config and bark_config.get("enabled", True):
             notifiers.append(BarkNotifier(bark_config))
 
-        if config.get("stdout", True):
-            notifiers.append(StdoutNotifier())
+        if config.get("log_notifications", config.get("stdout", True)):
+            notifiers.append(LoggerNotifier())
 
         return cls(notifiers)
 
@@ -70,4 +69,4 @@ class NotificationHub:
             try:
                 notifier.notify(title, body, level, kind)
             except Exception as exc:
-                print(f"Notifier {type(notifier).__name__} failed: {exc}", file=sys.stderr)
+                logger.warning("Notifier %s failed: %s", type(notifier).__name__, exc)
