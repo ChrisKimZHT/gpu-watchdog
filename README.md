@@ -42,8 +42,8 @@ Top-level options:
 - `log_level`: standard Python logging level.
 - `log_notifications`: also emit notifications through the configured logger.
 - `notifiers.bark`: Bark settings. `isArchive`, `icon`, `group`, and `level`
-  are passed through to Bark. Busy/process alerts force `level=critical`;
-  idle reminders use the configured Bark `level`.
+  configure Bark notifications. Alert events force `level=critical`;
+  reminders use the configured Bark `level`.
 
 Rule fields:
 

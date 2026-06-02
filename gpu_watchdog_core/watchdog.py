@@ -15,8 +15,6 @@ class Watchdog:
         self.evaluator = RuleEvaluator(config)
         self.notifier = NotificationHub.from_config(config)
         self.states: Dict[str, TriggerState] = {}
-        bark_config = config.get("notifiers", {}).get("bark", {})
-        self.reminder_level = str(bark_config.get("level", "active"))
 
     def run_forever(self, interval_seconds: float) -> None:
         while True:
@@ -44,9 +42,8 @@ class Watchdog:
             return
 
         state.last_trigger_at = now
-        level = "critical" if result.kind == "alert" else self.reminder_level
         if result.notify:
-            self.notifier.notify(result.title, result.body, level=level, kind=result.kind)
+            self.notifier.notify(result.title, result.body, kind=result.kind)
         CommandRunner.run(
             result.command,
             {

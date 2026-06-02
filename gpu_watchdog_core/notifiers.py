@@ -5,16 +5,17 @@ import urllib.request
 from typing import Any, Dict, Iterable, List
 
 from .log import logger, notification_logger
+from .models import NotificationKind
 
 
 class Notifier:
-    def notify(self, title: str, body: str, level: str, kind: str) -> None:
+    def notify(self, title: str, body: str, kind: NotificationKind) -> None:
         raise NotImplementedError
 
 
 class LoggerNotifier(Notifier):
-    def notify(self, title: str, body: str, level: str, kind: str) -> None:
-        notification_logger.info("%s level=%s %s: %s", kind.upper(), level, title, body)
+    def notify(self, title: str, body: str, kind: NotificationKind) -> None:
+        notification_logger.info("%s %s: %s", kind.upper(), title, body)
 
 
 class BarkNotifier(Notifier):
@@ -24,17 +25,18 @@ class BarkNotifier(Notifier):
         self.server = str(config.get("server", "https://api.day.app")).rstrip("/")
         self.device_key = str(config.get("device_key", "")).strip()
         self.timeout_seconds = float(config.get("timeout_seconds", 10))
+        self.reminder_level = str(config.get("level", "active"))
         self.options = {
             key: value
             for key, value in config.items()
-            if key in {"isArchive", "icon", "group", "level"} and value is not None
+            if key in {"isArchive", "icon", "group"} and value is not None
         }
         if not self.device_key:
             raise ValueError("notifiers.bark.device_key is required when Bark is enabled")
 
-    def notify(self, title: str, body: str, level: str, kind: str) -> None:
+    def notify(self, title: str, body: str, kind: NotificationKind) -> None:
         params = dict(self.options)
-        params["level"] = "critical" if kind == "alert" else level
+        params["level"] = "critical" if kind == "alert" else self.reminder_level
 
         path = "/".join(
             urllib.parse.quote(part, safe="")
@@ -64,9 +66,9 @@ class NotificationHub:
 
         return cls(notifiers)
 
-    def notify(self, title: str, body: str, level: str, kind: str) -> None:
+    def notify(self, title: str, body: str, kind: NotificationKind) -> None:
         for notifier in self.notifiers:
             try:
-                notifier.notify(title, body, level, kind)
+                notifier.notify(title, body, kind)
             except Exception as exc:
                 logger.warning("Notifier %s failed: %s", type(notifier).__name__, exc)

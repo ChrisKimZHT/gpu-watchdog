@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, cast
 
 from .log import logger
-from .models import ResourceUsage, RuleResult
+from .models import NotificationKind, ResourceUsage, RuleResult
 
 
 def warn_skip(scope: str, exc: BaseException) -> None:
@@ -46,9 +46,12 @@ def compare(kind: str, value: float, threshold: float) -> bool:
     raise ValueError("rule kind must be 'busy' or 'idle'")
 
 
-def event_kind(rule_kind: str, rule: Dict[str, Any]) -> str:
+def event_kind(rule_kind: str, rule: Dict[str, Any]) -> NotificationKind:
     if "event" in rule:
-        return str(rule["event"])
+        event = str(rule["event"])
+        if event not in {"alert", "reminder"}:
+            raise ValueError("rule event must be 'alert' or 'reminder'")
+        return cast(NotificationKind, event)
     return "alert" if rule_kind == "busy" else "reminder"
 
 
@@ -66,7 +69,7 @@ def build_result(
     triggered: bool,
     title: str,
     body: str,
-    kind: str,
+    kind: NotificationKind,
     config: Dict[str, Any],
 ) -> RuleResult:
     return RuleResult(

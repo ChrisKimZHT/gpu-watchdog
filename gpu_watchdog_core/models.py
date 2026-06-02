@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Literal, Optional
+
+
+NotificationKind = Literal["alert", "reminder"]
 
 
 @dataclass(frozen=True)
@@ -23,7 +26,7 @@ class RuleResult:
     triggered: bool
     title: str
     body: str
-    kind: str
+    kind: NotificationKind
     command: Optional[Any]
     notify: bool
     cooldown_seconds: float
