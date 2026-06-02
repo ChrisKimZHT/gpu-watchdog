@@ -43,7 +43,7 @@ Top-level options:
 - `log_notifications`: also emit notifications through the configured logger.
 - `notifiers.bark`: Bark settings. `enabled`, `server`, `device_key`,
   `timeout_seconds`, and `level` are consumed by this project; all other
-  non-null fields are passed through to Bark as query parameters. Alert events
+  non-null fields are passed through to Bark in the POST body. Alert events
   force `level=critical`; reminders use the configured Bark `level`.
 
 Rule fields:

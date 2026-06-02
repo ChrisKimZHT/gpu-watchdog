@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import urllib.parse
+import json
 import urllib.request
 from typing import Any, Dict, Iterable, List
 
@@ -37,15 +37,22 @@ class BarkNotifier(Notifier):
             raise ValueError("notifiers.bark.device_key is required when Bark is enabled")
 
     def notify(self, title: str, body: str, kind: NotificationKind) -> None:
-        params = dict(self.options)
-        params["level"] = "critical" if kind == "alert" else self.reminder_level
-
-        path = "/".join(
-            urllib.parse.quote(part, safe="")
-            for part in (self.device_key, title, body)
+        payload = dict(self.options)
+        payload.update(
+            {
+                "title": title,
+                "body": body,
+                "device_key": self.device_key,
+                "level": "critical" if kind == "alert" else self.reminder_level,
+            }
         )
-        url = f"{self.server}/{path}?{urllib.parse.urlencode(params)}"
-        req = urllib.request.Request(url, method="GET")
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"{self.server}/push",
+            data=data,
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            method="POST",
+        )
         with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
             resp.read()
 
