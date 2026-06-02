@@ -19,7 +19,8 @@ the config-level `log_level` option.
 ## Layout
 
 - `gpu_watchdog.py`: thin command-line entry point.
-- `gpu_watchdog_core/cli.py`: argument parsing, config loading, sample printing.
+- `gpu_watchdog_core/cli.py`: argument parsing, config loading, and command dispatch.
+- `gpu_watchdog_core/diagnostics.py`: formatted sample diagnostics.
 - `gpu_watchdog_core/sampler.py`: CPU, memory, disk, GPU, and GPU process sampling.
 - `gpu_watchdog_core/rules.py`: resource and process rule evaluation.
 - `gpu_watchdog_core/watchdog.py`: polling, trigger state, cooldown, notification, and callback orchestration.
@@ -33,9 +34,9 @@ standard library.
 
 Top-level options:
 
-- `interval_seconds`: polling interval.
+- `interval_seconds`: required polling interval.
 - `cooldown_seconds`: default minimum seconds between repeated triggers for the
-  same active rule.
+  same active rule. Required top-level option.
 - `log_level`: standard Python logging level.
 - `log_notifications`: also emit notifications through the configured logger.
 - `notifiers.bark`: Bark settings. `isArchive`, `icon`, `group`, and `level`

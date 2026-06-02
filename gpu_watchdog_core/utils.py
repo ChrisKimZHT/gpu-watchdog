@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, Optional
 
-from .constants import DEFAULT_COOLDOWN_SECONDS
 from .log import logger
 from .models import ResourceUsage, RuleResult
 
@@ -30,7 +29,7 @@ def mib(value: float) -> str:
 
 
 def usage_text(usage: ResourceUsage) -> str:
-    return f"{human_bytes(usage.used)} / {human_bytes(usage.total)} ({pct(usage.percent)})"
+    return f"{pct(usage.percent)} ({human_bytes(usage.used)}/{human_bytes(usage.total)})"
 
 
 def normalize_ids(values: Optional[Iterable[Any]]) -> Optional[set]:
@@ -58,12 +57,7 @@ def rule_notify(rule: Dict[str, Any]) -> bool:
 
 
 def rule_cooldown(rule: Dict[str, Any], config: Dict[str, Any]) -> float:
-    return float(
-        rule.get(
-            "cooldown_seconds",
-            config.get("cooldown_seconds", DEFAULT_COOLDOWN_SECONDS),
-        )
-    )
+    return float(rule.get("cooldown_seconds", config["cooldown_seconds"]))
 
 
 def build_result(
