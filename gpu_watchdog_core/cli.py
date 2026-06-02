@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .diagnostics import print_samples
 from .log import configure_logging, logger
 from .watchdog import Watchdog
+
+DEFAULT_CONFIG_PATH = Path("config.json")
 
 
 def load_config(path: str) -> Dict[str, Any]:
@@ -30,15 +33,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     # without mutating sys.argv. Passing argv makes argparse ignore the real
     # command line; None preserves argparse's normal sys.argv[1:] path.
     args = parse_args(argv)
-    config = load_config(args.config) if args.config else {}
+    config_path = args.config
+    if not config_path and not args.samples and DEFAULT_CONFIG_PATH.exists():
+        config_path = str(DEFAULT_CONFIG_PATH)
+
+    config = load_config(config_path) if config_path else {}
     configure_logging(str(config.get("log_level", "INFO")))
 
     if args.samples:
         print_samples()
         return 0
 
-    if not args.config:
-        logger.error("--config is required unless --samples is used")
+    if not config_path:
+        logger.error("--config is required unless ./config.json exists")
         return 2
 
     interval_seconds = float(config["interval_seconds"])

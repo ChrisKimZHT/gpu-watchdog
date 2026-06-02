@@ -7,14 +7,16 @@ and GPU training process disappearance.
 
 ```bash
 python3 gpu_watchdog.py --samples
+python3 gpu_watchdog.py --once
 python3 gpu_watchdog.py --config config.example.json --once
-python3 gpu_watchdog.py --config config.example.json
+python3 gpu_watchdog.py
 ```
 
 `--samples` logs the metrics visible on the current host. Memory, disk, and GPU
 memory output includes used amount, total amount, and percentage. Long-running
 mode uses `interval_seconds` from the config. Logging verbosity is controlled by
-the config-level `log_level` option.
+the config-level `log_level` option. When `--config` is omitted, the watchdog
+loads `./config.json`; if that file does not exist, it exits with an error.
 
 ## Layout
 
