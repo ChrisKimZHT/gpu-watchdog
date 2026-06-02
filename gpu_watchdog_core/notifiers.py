@@ -21,6 +21,8 @@ class LoggerNotifier(Notifier):
 class BarkNotifier(Notifier):
     """Bark notifier with user-facing options passed through."""
 
+    PROJECT_KEYS = {"enabled", "server", "device_key", "timeout_seconds", "level"}
+
     def __init__(self, config: Dict[str, Any]) -> None:
         self.server = str(config.get("server", "https://api.day.app")).rstrip("/")
         self.device_key = str(config.get("device_key", "")).strip()
@@ -29,7 +31,7 @@ class BarkNotifier(Notifier):
         self.options = {
             key: value
             for key, value in config.items()
-            if key in {"isArchive", "icon", "group"} and value is not None
+            if key not in self.PROJECT_KEYS and value is not None
         }
         if not self.device_key:
             raise ValueError("notifiers.bark.device_key is required when Bark is enabled")

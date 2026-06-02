@@ -41,9 +41,10 @@ Top-level options:
   same active rule. Required top-level option.
 - `log_level`: standard Python logging level.
 - `log_notifications`: also emit notifications through the configured logger.
-- `notifiers.bark`: Bark settings. `isArchive`, `icon`, `group`, and `level`
-  configure Bark notifications. Alert events force `level=critical`;
-  reminders use the configured Bark `level`.
+- `notifiers.bark`: Bark settings. `enabled`, `server`, `device_key`,
+  `timeout_seconds`, and `level` are consumed by this project; all other
+  non-null fields are passed through to Bark as query parameters. Alert events
+  force `level=critical`; reminders use the configured Bark `level`.
 
 Rule fields:
 

@@ -11,6 +11,7 @@
       "isArchive": "1",
       "icon": "https://example.com/icon.png",
       "group": "gpu-watchdog",
+      "sound": "alarm",
       "level": "active"
     }
   },
