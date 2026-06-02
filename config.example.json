@@ -67,7 +67,7 @@
     {
       "id": "train-pid-watch",
       "name": "training",
-      "pid": 12345,
+      "pids": [12345, 23456],
       "notify": true,
       "command": "echo \"training process disappeared\""
     }

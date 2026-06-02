@@ -171,10 +171,31 @@ class RuleEvaluator:
 
         gpu_pids = {int(proc.pid) for proc in gpu_processes}
         for index, rule in enumerate(rules):
-            pid = int(rule["pid"])
-            triggered = pid not in gpu_pids
-            name = str(rule.get("name", pid))
+            pids = self.process_rule_pids(rule)
+            missing_pids = [pid for pid in pids if pid not in gpu_pids]
+            present_pids = [pid for pid in pids if pid in gpu_pids]
+            triggered = bool(missing_pids)
+            name = str(rule.get("name", ",".join(str(pid) for pid in pids)))
             title = str(rule.get("title", f"GPU process disappeared: {name}"))
-            body = str(rule.get("body", f"Process {pid} is no longer present in nvidia-smi compute process list"))
-            rule_id = str(rule.get("id", f"process:{pid}:{index}"))
+            body = str(
+                rule.get(
+                    "body",
+                    (
+                        f"Missing GPU process PID(s): {missing_pids}; "
+                        f"still present PID(s): {present_pids}"
+                    ),
+                )
+            )
+            rule_id = str(rule.get("id", f"process:{','.join(str(pid) for pid in pids)}:{index}"))
             yield build_result(rule, rule_id, triggered, title, body, "alert", self.config)
+
+    @staticmethod
+    def process_rule_pids(rule: Dict[str, Any]) -> List[int]:
+        if "pids" in rule:
+            raw_pids = rule["pids"]
+            if not isinstance(raw_pids, list):
+                raise ValueError("process rule pids must be a list")
+            return [int(pid) for pid in raw_pids]
+        if "pid" in rule:
+            return [int(rule["pid"])]
+        raise ValueError("process rule requires pid or pids")

@@ -76,6 +76,8 @@ GPU rules use the provided `nvsmi.py` interface. Set `mode` to `compute`,
 multiple metrics are checked. GPU IDs are strings, matching `nvidia-smi` output.
 GPU memory descriptions include used memory, total memory, and percentage.
 
-Process rules watch whether a PID is still present in the `nvidia-smi` compute
-process list. This intentionally alerts when the process disappears, which means
-normal training completion can also trigger an alert.
+Process rules watch whether one or more PIDs are still present in the
+`nvidia-smi` compute process list. Use `pids` for multiple processes, or the
+legacy `pid` field for one process. A rule alerts when any configured PID is no
+longer present, which means normal training completion can also trigger an
+alert.
