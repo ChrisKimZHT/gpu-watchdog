@@ -1,4 +1,6 @@
 .vscode
+.agents
+.codex
 
 ### Python template
 # Byte-compiled / optimized / DLL files
