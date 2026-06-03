@@ -43,9 +43,10 @@ Top-level options:
 - `log_level`: standard Python logging level. Defaults to `INFO`.
 - Logger notifications are always enabled.
 - `notifiers.bark`: Bark settings. `enabled`, `server`, `device_key`,
-  `timeout_seconds`, and `level` are consumed by this project; all other
-  non-null fields are passed through to Bark in the POST body. Alert events
-  force `level=critical`; reminders use the configured Bark `level`.
+  `timeout_seconds`, and `level` are consumed by this project. Put Bark-specific
+  POST body fields under `passthrough`; non-null passthrough fields are sent
+  with the request. Alert events force `level=critical`; reminders use the
+  configured Bark `level`.
 
 Rule fields:
 

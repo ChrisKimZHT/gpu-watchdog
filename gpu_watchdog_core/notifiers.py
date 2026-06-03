@@ -24,21 +24,15 @@ class LoggerNotifier(Notifier):
 class BarkNotifier(Notifier):
     """Bark notifier with user-facing options passed through."""
 
-    PROJECT_KEYS = {"enabled", "server", "device_key", "timeout_seconds", "level"}
-
     def __init__(self, config: Dict[str, Any]) -> None:
         self.server = config["server"]
         self.device_key = config["device_key"]
         self.timeout_seconds = config["timeout_seconds"]
         self.reminder_level = config["level"]
-        self.options = {
-            key: value
-            for key, value in config.items()
-            if key not in self.PROJECT_KEYS and value is not None
-        }
+        self.passthrough = config["passthrough"]
 
     def notify(self, title: str, body: str, kind: NotificationKind) -> None:
-        payload = dict(self.options)
+        payload = dict(self.passthrough)
         payload.update(
             {
                 "title": title,

@@ -7,6 +7,7 @@ RULE_TYPES = {"cpu", "memory", "disk", "gpu", "process"}
 RULE_KINDS = {"busy", "idle"}
 MATCH_MODES = {"any", "all"}
 EVENT_KINDS = {"alert", "reminder"}
+BARK_KEYS = {"enabled", "server", "device_key", "timeout_seconds", "level", "passthrough"}
 
 DEFAULT_LOG_LEVEL = "INFO"
 DEFAULT_BARK_SERVER = "https://api.day.app"
@@ -39,16 +40,28 @@ def _normalize_notifiers(raw_notifiers: Any) -> Dict[str, Any]:
 
 
 def _normalize_bark(raw_bark: Mapping[str, Any]) -> Dict[str, Any]:
-    bark = dict(raw_bark)
-    enabled = _bool_value(bark.get("enabled", True), "notifiers.bark.enabled")
-    bark["enabled"] = enabled
-    bark["server"] = str(bark.get("server", DEFAULT_BARK_SERVER)).rstrip("/")
-    bark["timeout_seconds"] = _positive_number(
-        bark.get("timeout_seconds", DEFAULT_BARK_TIMEOUT_SECONDS),
-        "notifiers.bark.timeout_seconds",
-    )
-    bark["level"] = str(bark.get("level", DEFAULT_BARK_LEVEL))
-    bark["device_key"] = str(bark.get("device_key", "")).strip()
+    unknown_keys = sorted(set(raw_bark) - BARK_KEYS)
+    if unknown_keys:
+        joined = ", ".join(unknown_keys)
+        raise ValueError(f"notifiers.bark passthrough fields must be inside passthrough: {joined}")
+
+    enabled = _bool_value(raw_bark.get("enabled", True), "notifiers.bark.enabled")
+    passthrough = _require_object(raw_bark.get("passthrough", {}), "notifiers.bark.passthrough")
+    bark = {
+        "enabled": enabled,
+        "server": str(raw_bark.get("server", DEFAULT_BARK_SERVER)).rstrip("/"),
+        "timeout_seconds": _positive_number(
+            raw_bark.get("timeout_seconds", DEFAULT_BARK_TIMEOUT_SECONDS),
+            "notifiers.bark.timeout_seconds",
+        ),
+        "level": str(raw_bark.get("level", DEFAULT_BARK_LEVEL)),
+        "device_key": str(raw_bark.get("device_key", "")).strip(),
+        "passthrough": {
+            key: value
+            for key, value in passthrough.items()
+            if value is not None
+        },
+    }
     if enabled and not bark["device_key"]:
         raise ValueError("notifiers.bark.device_key is required when Bark is enabled")
     return bark

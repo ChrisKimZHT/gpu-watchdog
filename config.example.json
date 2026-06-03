@@ -7,11 +7,13 @@
       "enabled": false,
       "server": "https://api.day.app",
       "device_key": "REPLACE_WITH_YOUR_BARK_KEY",
-      "isArchive": "1",
-      "icon": "https://example.com/icon.png",
-      "group": "gpu-watchdog",
-      "sound": "alarm",
-      "level": "active"
+      "level": "active",
+      "passthrough": {
+        "isArchive": "1",
+        "icon": "https://example.com/icon.png",
+        "group": "gpu-watchdog",
+        "sound": "alarm"
+      }
     }
   },
   "rules": [
