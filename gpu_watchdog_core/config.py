@@ -8,11 +8,24 @@ RULE_KINDS = {"busy", "idle"}
 MATCH_MODES = {"any", "all"}
 EVENT_KINDS = {"alert", "reminder"}
 BARK_KEYS = {"enabled", "server", "device_key", "timeout_seconds", "level", "passthrough"}
+SMTP_KEYS = {
+    "enabled",
+    "host",
+    "port",
+    "username",
+    "password",
+    "from_addr",
+    "to_addrs",
+    "timeout_seconds",
+    "ssl",
+    "starttls",
+}
 
 DEFAULT_LOG_LEVEL = "INFO"
 DEFAULT_BARK_SERVER = "https://api.day.app"
 DEFAULT_BARK_TIMEOUT_SECONDS = 10.0
 DEFAULT_BARK_LEVEL = "active"
+DEFAULT_SMTP_TIMEOUT_SECONDS = 10.0
 
 
 def normalize_config(raw_config: Any) -> Dict[str, Any]:
@@ -35,6 +48,10 @@ def _normalize_notifiers(raw_notifiers: Any) -> Dict[str, Any]:
     if "bark" in notifiers:
         bark = _require_object(notifiers["bark"], "notifiers.bark")
         normalized["bark"] = _normalize_bark(bark)
+
+    if "smtp" in notifiers:
+        smtp = _require_object(notifiers["smtp"], "notifiers.smtp")
+        normalized["smtp"] = _normalize_smtp(smtp)
 
     return normalized
 
@@ -65,6 +82,43 @@ def _normalize_bark(raw_bark: Mapping[str, Any]) -> Dict[str, Any]:
     if enabled and not bark["device_key"]:
         raise ValueError("notifiers.bark.device_key is required when Bark is enabled")
     return bark
+
+
+def _normalize_smtp(raw_smtp: Mapping[str, Any]) -> Dict[str, Any]:
+    unknown_keys = sorted(set(raw_smtp) - SMTP_KEYS)
+    if unknown_keys:
+        joined = ", ".join(unknown_keys)
+        raise ValueError(f"notifiers.smtp has unknown fields: {joined}")
+
+    enabled = _bool_value(raw_smtp.get("enabled", True), "notifiers.smtp.enabled")
+    use_ssl = _bool_value(raw_smtp.get("ssl", False), "notifiers.smtp.ssl")
+    starttls = _bool_value(raw_smtp.get("starttls", not use_ssl), "notifiers.smtp.starttls")
+    if use_ssl and starttls:
+        raise ValueError("notifiers.smtp.ssl and notifiers.smtp.starttls cannot both be true")
+
+    smtp = {
+        "enabled": enabled,
+        "host": str(raw_smtp.get("host", "")).strip(),
+        "port": _port_number(raw_smtp.get("port", 465 if use_ssl else 587), "notifiers.smtp.port"),
+        "username": str(raw_smtp.get("username", "")),
+        "password": str(raw_smtp.get("password", "")),
+        "from_addr": str(raw_smtp.get("from_addr", "")).strip(),
+        "to_addrs": _non_empty_string_list(raw_smtp.get("to_addrs", []), "notifiers.smtp.to_addrs"),
+        "timeout_seconds": _positive_number(
+            raw_smtp.get("timeout_seconds", DEFAULT_SMTP_TIMEOUT_SECONDS),
+            "notifiers.smtp.timeout_seconds",
+        ),
+        "ssl": use_ssl,
+        "starttls": starttls,
+    }
+    if enabled:
+        if not smtp["host"]:
+            raise ValueError("notifiers.smtp.host is required when SMTP is enabled")
+        if not smtp["from_addr"]:
+            raise ValueError("notifiers.smtp.from_addr is required when SMTP is enabled")
+        if not smtp["to_addrs"]:
+            raise ValueError("notifiers.smtp.to_addrs is required when SMTP is enabled")
+    return smtp
 
 
 def _normalize_rules(raw_rules: Any, default_cooldown_seconds: float) -> List[Dict[str, Any]]:
@@ -236,6 +290,16 @@ def _number(value: Any, path: str) -> float:
         raise ValueError(f"{path} must be a number") from exc
 
 
+def _port_number(value: Any, path: str) -> int:
+    number = _positive_number(value, path)
+    if not number.is_integer():
+        raise ValueError(f"{path} must be an integer")
+    port = int(number)
+    if port > 65535:
+        raise ValueError(f"{path} must be between 1 and 65535")
+    return port
+
+
 def _rule_kind(value: Any, path: str) -> str:
     kind = str(value)
     if kind not in RULE_KINDS:
@@ -254,6 +318,13 @@ def _string_list(value: Any, path: str) -> List[str]:
     if not isinstance(value, list):
         raise ValueError(f"{path} must be a list")
     return [str(item) for item in value]
+
+
+def _non_empty_string_list(value: Any, path: str) -> List[str]:
+    items = [item.strip() for item in _string_list(value, path)]
+    if any(not item for item in items):
+        raise ValueError(f"{path} must not contain empty strings")
+    return items
 
 
 def _int_list(value: Any, path: str) -> List[int]:

@@ -27,7 +27,7 @@ loads `./config.json`; if that file does not exist, it exits with an error.
 - `gpu_watchdog_core/sampler.py`: CPU, memory, disk, GPU, and GPU process sampling.
 - `gpu_watchdog_core/rules.py`: unified rule evaluation.
 - `gpu_watchdog_core/watchdog.py`: polling, trigger state, cooldown, notification, and callback orchestration.
-- `gpu_watchdog_core/notifiers.py`: notification channels, currently logger and Bark.
+- `gpu_watchdog_core/notifiers.py`: notification channels, currently logger, Bark, and SMTP.
 - `gpu_watchdog_core/callbacks.py`: command callback execution.
 
 ## Config
@@ -47,6 +47,13 @@ Top-level options:
   POST body fields under `passthrough`; non-null passthrough fields are sent
   with the request. Alert events force `level=critical`; reminders use the
   configured Bark `level`.
+- `notifiers.smtp`: SMTP email settings using Python standard-library modules.
+  `enabled`, `host`, `port`, `username`, `password`, `from_addr`, `to_addrs`,
+  `timeout_seconds`, `ssl`, and `starttls` are consumed by this project.
+  `to_addrs` must be a list of recipient addresses. `ssl` uses implicit TLS,
+  usually port `465`; `starttls` upgrades a plain connection, usually port
+  `587`. They cannot both be true. When `username` is empty, SMTP auth is
+  skipped.
 
 Rule fields:
 

@@ -7,6 +7,7 @@
       "enabled": false,
       "server": "https://api.day.app",
       "device_key": "REPLACE_WITH_YOUR_BARK_KEY",
+      "timeout_seconds": 10,
       "level": "active",
       "passthrough": {
         "isArchive": "1",
@@ -14,6 +15,18 @@
         "group": "gpu-watchdog",
         "sound": "alarm"
       }
+    },
+    "smtp": {
+      "enabled": false,
+      "host": "smtp.example.com",
+      "port": 587,
+      "username": "REPLACE_WITH_SMTP_USERNAME",
+      "password": "REPLACE_WITH_SMTP_PASSWORD",
+      "from_addr": "watchdog@example.com",
+      "to_addrs": ["admin@example.com"],
+      "timeout_seconds": 10,
+      "ssl": false,
+      "starttls": true
     }
   },
   "rules": [
