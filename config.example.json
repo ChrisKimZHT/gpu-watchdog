@@ -30,6 +30,7 @@
       "id": "mem-high",
       "type": "memory",
       "notify": true,
+      "pending_period": 60,
       "options": {
         "kind": "busy",
         "threshold": 90

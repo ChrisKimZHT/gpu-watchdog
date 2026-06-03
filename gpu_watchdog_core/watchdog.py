@@ -45,17 +45,33 @@ class Watchdog:
         state = self.states.setdefault(result.rule_id, TriggerState())
         should_fire = False
         if result.triggered:
-            should_fire = (not state.active) or (
+            # Enter or continue the pending window for this uninterrupted trigger.
+            if state.triggered_since is None:
+                state.triggered_since = now
+            elapsed = now - state.triggered_since
+            if elapsed < result.pending_period:
+                state.active = True
+                return
+
+            # Once pending has passed, fire immediately for a new trigger streak;
+            # after that, repeated notifications are gated by cooldown.
+            first_fire_for_current_trigger = (
+                state.last_trigger_at <= 0 or state.last_trigger_at < state.triggered_since
+            )
+            should_fire = first_fire_for_current_trigger or (
                 result.cooldown_seconds > 0
                 and now - state.last_trigger_at >= result.cooldown_seconds
             )
             state.active = True
         else:
+            # A healthy evaluation ends the trigger streak and resets pending.
             state.active = False
+            state.triggered_since = None
 
         if not should_fire:
             return
 
+        # Notifications and callbacks share the same firing decision.
         state.last_trigger_at = now
         if result.notify:
             self.notifier.notify(result.title, result.body, kind=result.kind)

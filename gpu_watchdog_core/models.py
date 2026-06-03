@@ -18,6 +18,7 @@ class ResourceUsage:
 class TriggerState:
     active: bool = False
     last_trigger_at: float = 0.0
+    triggered_since: Optional[float] = None
 
 
 @dataclass
@@ -30,3 +31,4 @@ class RuleResult:
     command: Optional[Any]
     notify: bool
     cooldown_seconds: float
+    pending_period: float

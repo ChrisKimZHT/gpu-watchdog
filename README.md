@@ -53,6 +53,9 @@ Rule fields:
 - `notify`: send notification when true. Defaults to true.
 - `command`: optional shell command or argv list to run as a callback.
 - `cooldown_seconds`: optional per-rule cooldown override.
+- `pending_period`: optional seconds a rule must stay triggered before
+  notification and callback execution. Defaults to `0`. If the rule recovers
+  before this duration, the timer is reset.
 - `event`: optional notification kind, either `alert` or `reminder`.
 - `options`: object containing fields specific to the rule `type`.
 

@@ -63,6 +63,13 @@ def rule_cooldown(rule: Dict[str, Any], config: Dict[str, Any]) -> float:
     return float(rule.get("cooldown_seconds", config["cooldown_seconds"]))
 
 
+def rule_pending_period(rule: Dict[str, Any]) -> float:
+    period = float(rule.get("pending_period", 0))
+    if period < 0:
+        raise ValueError("rule pending_period must be greater than or equal to 0")
+    return period
+
+
 def build_result(
     rule: Dict[str, Any],
     rule_id: str,
@@ -81,4 +88,5 @@ def build_result(
         command=rule.get("command"),
         notify=rule_notify(rule),
         cooldown_seconds=rule_cooldown(rule, config),
+        pending_period=rule_pending_period(rule),
     )
