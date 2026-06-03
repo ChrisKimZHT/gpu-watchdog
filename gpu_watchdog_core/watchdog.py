@@ -35,12 +35,10 @@ class Watchdog:
                 failed_rule_ids.append(result.rule_id)
             logger.debug("Evaluation result: %s", result)
             self.handle_result(result, now)
+        time_usage = (time.time() - now) * 1000
         failed_text = ", ".join(failed_rule_ids) if failed_rule_ids else "none"
         logger.info(
-            "Evaluation summary: %s/%s passed; failed: %s",
-            passed_count,
-            total_count,
-            failed_text,
+            f"Evaluation summary: {passed_count}/{total_count} passed; failed: {failed_text}; Time used: {time_usage:.2f} ms",
         )
 
     def handle_result(self, result: RuleResult, now: float) -> None:
