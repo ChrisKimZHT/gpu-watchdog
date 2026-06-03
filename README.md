@@ -6,6 +6,7 @@ and GPU training process disappearance.
 ## Run
 
 ```bash
+python3 gpu_watchdog.py --version
 python3 gpu_watchdog.py --samples
 python3 gpu_watchdog.py --once
 python3 gpu_watchdog.py --config config.example.json --once

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from .config import normalize_config
 from .diagnostics import print_samples
 from .log import configure_logging, logger
+from . import __version__
 from .watchdog import Watchdog
 
 DEFAULT_CONFIG_PATH = Path("config.json")
@@ -21,6 +22,7 @@ def load_config(path: str) -> Dict[str, Any]:
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Zero-dependency Linux resource watchdog for GPU training hosts")
+    parser.add_argument("--version", action="version", version=f"gpu-watchdog {__version__} (https://github.com/ChrisKimZHT/gpu-watchdog)")
     parser.add_argument("--config", help="Path to JSON config file")
     parser.add_argument("--once", action="store_true", help="Run one check and exit")
     parser.add_argument("--samples", action="store_true", help="Print current sampled metrics and exit")
