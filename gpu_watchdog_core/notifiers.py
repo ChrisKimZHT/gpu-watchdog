@@ -4,7 +4,7 @@ import json
 import urllib.request
 from typing import Any, Dict, Iterable, List
 
-from .log import logger, notification_logger
+from .log import logger
 from .models import NotificationKind
 
 
@@ -15,7 +15,10 @@ class Notifier:
 
 class LoggerNotifier(Notifier):
     def notify(self, title: str, body: str, kind: NotificationKind) -> None:
-        notification_logger.info("%s | %s | %s", kind.upper(), title, body)
+        if kind == "reminder":
+            logger.warning("%s | %s | %s", kind.upper(), title, body)
+        else: # kind == "alert"
+            logger.critical("%s | %s | %s", kind.upper(), title, body)
 
 
 class BarkNotifier(Notifier):

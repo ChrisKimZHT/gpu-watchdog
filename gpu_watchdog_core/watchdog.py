@@ -24,9 +24,24 @@ class Watchdog:
 
     def run_once(self) -> None:
         now = time.time()
+        total_count = 0
+        passed_count = 0
+        failed_rule_ids = []
         for result in self.evaluator.evaluate():
+            total_count += 1
+            if not result.triggered:
+                passed_count += 1
+            else:
+                failed_rule_ids.append(result.rule_id)
             logger.debug("Evaluation result: %s", result)
             self.handle_result(result, now)
+        failed_text = ", ".join(failed_rule_ids) if failed_rule_ids else "none"
+        logger.info(
+            "Evaluation summary: %s/%s passed; failed: %s",
+            passed_count,
+            total_count,
+            failed_text,
+        )
 
     def handle_result(self, result: RuleResult, now: float) -> None:
         state = self.states.setdefault(result.rule_id, TriggerState())
