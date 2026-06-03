@@ -24,7 +24,7 @@ loads `./config.json`; if that file does not exist, it exits with an error.
 - `gpu_watchdog_core/cli.py`: argument parsing, config loading, and command dispatch.
 - `gpu_watchdog_core/diagnostics.py`: formatted sample diagnostics.
 - `gpu_watchdog_core/sampler.py`: CPU, memory, disk, GPU, and GPU process sampling.
-- `gpu_watchdog_core/rules.py`: resource and process rule evaluation.
+- `gpu_watchdog_core/rules.py`: unified rule evaluation.
 - `gpu_watchdog_core/watchdog.py`: polling, trigger state, cooldown, notification, and callback orchestration.
 - `gpu_watchdog_core/notifiers.py`: notification channels, currently logger and Bark.
 - `gpu_watchdog_core/callbacks.py`: command callback execution.
@@ -48,12 +48,19 @@ Top-level options:
 
 Rule fields:
 
-- `kind`: `busy` for resource occupation alerts, `idle` for idle reminders.
-- `threshold`: percentage threshold for CPU pressure, memory, disk, and simple
-  GPU rules.
+- `id`: stable rule identifier used for trigger state and callbacks.
+- `type`: one of `cpu`, `memory`, `disk`, `gpu`, or `process`.
 - `notify`: send notification when true. Defaults to true.
 - `command`: optional shell command or argv list to run as a callback.
 - `cooldown_seconds`: optional per-rule cooldown override.
+- `event`: optional notification kind, either `alert` or `reminder`.
+- `options`: object containing fields specific to the rule `type`.
+
+Resource rule options:
+
+- `kind`: `busy` for resource occupation alerts, `idle` for idle reminders.
+- `threshold`: percentage threshold for CPU pressure, memory, disk, and simple
+  GPU rules.
 
 Callback commands receive these environment variables:
 
@@ -64,24 +71,24 @@ Callback commands receive these environment variables:
 
 ## Resources
 
-CPU uses `/proc/pressure/cpu`. The default metric is `some.avg10`; other PSI
-fields such as `some.avg60`, `some.avg300`, or `full.avg10` can be configured
-when available on the host.
+CPU rules use `/proc/pressure/cpu`. The default `options.metric` is
+`some.avg10`; other PSI fields such as `some.avg60`, `some.avg300`, or
+`full.avg10` can be configured when available on the host.
 
 Memory uses `/proc/meminfo` and monitors used percentage based on
 `MemAvailable`. The sampler returns total bytes, used bytes, and used
 percentage.
 
-Disk rules monitor one mount point per rule with `shutil.disk_usage`. The
-sampler returns total bytes, used bytes, and used percentage.
+Disk rules monitor one `options.mount` point per rule with `shutil.disk_usage`.
+The sampler returns total bytes, used bytes, and used percentage.
 
-GPU rules use the provided `nvsmi.py` interface. Set `mode` to `compute`,
-`memory`, or `both`. Set `match` to `any` or `all` when multiple GPUs or
-multiple metrics are checked. GPU IDs are strings, matching `nvidia-smi` output.
-GPU memory descriptions include used memory, total memory, and percentage.
+GPU rules use the provided `nvsmi.py` interface. Set `options.mode` to
+`compute`, `memory`, or `both`. Set `options.match` to `any` or `all` when
+multiple GPUs or multiple metrics are checked. GPU IDs are strings, matching
+`nvidia-smi` output. GPU memory descriptions include used memory, total memory,
+and percentage.
 
 Process rules watch whether one or more PIDs are still present in the
-`nvidia-smi` compute process list. Use `pids` for multiple processes, or the
-legacy `pid` field for one process. A rule alerts when any configured PID is no
-longer present, which means normal training completion can also trigger an
-alert.
+`nvidia-smi` compute process list. Set `options.pids` to the process IDs to
+watch. A rule alerts when any configured PID is no longer present, which means
+normal training completion can also trigger an alert.

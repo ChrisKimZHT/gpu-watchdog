@@ -11,18 +11,29 @@ from .utils import build_result, compare, event_kind, mib, normalize_ids, pct, u
 class RuleEvaluator:
     def __init__(self, config: Dict[str, Any]) -> None:
         self.config = config
+        self.rules = self.config.get("rules", [])
 
     def evaluate(self) -> Iterable[RuleResult]:
-        yield from self.evaluate_cpu_rules()
-        yield from self.evaluate_memory_rules()
-        yield from self.evaluate_disk_rules()
-        yield from self.evaluate_gpu_rules()
-        yield from self.evaluate_process_rules()
+        for rule in self.rules:
+            rule_type = str(rule["type"])
+            if rule_type == "cpu":
+                yield from self.evaluate_cpu_rule(rule)
+            elif rule_type == "memory":
+                yield from self.evaluate_memory_rule(rule)
+            elif rule_type == "disk":
+                yield from self.evaluate_disk_rule(rule)
+            elif rule_type == "gpu":
+                yield from self.evaluate_gpu_rule(rule)
+            elif rule_type == "process":
+                yield from self.evaluate_process_rule(rule)
+            else:
+                logger.warning("Unknown rule type %s in rule %s; skipping", rule_type, rule["id"])
 
-    def evaluate_cpu_rules(self) -> Iterable[RuleResult]:
-        rules = self.config.get("resources", {}).get("cpu", [])
-        if not rules:
-            return
+    @staticmethod
+    def rule_options(rule: Dict[str, Any]) -> Dict[str, Any]:
+        return rule["options"]
+
+    def evaluate_cpu_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:
         try:
             metrics = ResourceSampler.cpu_pressure()
         except FileNotFoundError:
@@ -32,99 +43,92 @@ class RuleEvaluator:
             warn_skip("CPU pressure", exc)
             return
 
-        for index, rule in enumerate(rules):
-            metric = str(rule.get("metric", "some.avg10"))
-            threshold = float(rule["threshold"])
-            kind = str(rule.get("kind", "busy"))
-            value = metrics.get(metric)
-            if value is None:
-                logger.warning("CPU pressure metric %r is unavailable; skipping", metric)
-                continue
-            triggered = compare(kind, value, threshold)
-            title = str(rule.get("title", f"CPU {kind}: {metric} {pct(value)}"))
-            body = str(rule.get("body", f"CPU pressure {metric} is {pct(value)}, threshold {pct(threshold)}"))
-            rule_id = str(rule.get("id", f"cpu:{index}:{metric}:{kind}"))
-            yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
-
-    def evaluate_memory_rules(self) -> Iterable[RuleResult]:
-        rules = self.config.get("resources", {}).get("mem", [])
-        if not rules:
+        options = self.rule_options(rule)
+        metric = str(options.get("metric", "some.avg10"))
+        threshold = float(options["threshold"])
+        kind = str(options.get("kind", "busy"))
+        value = metrics.get(metric)
+        if value is None:
+            logger.warning("CPU pressure metric %r is unavailable; skipping", metric)
             return
+        triggered = compare(kind, value, threshold)
+        title = str(rule.get("title", f"CPU {kind}: {metric} {pct(value)}"))
+        body = str(rule.get("body", f"CPU pressure {metric} is {pct(value)}, threshold {pct(threshold)}"))
+        rule_id = str(rule["id"])
+        yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
+
+    def evaluate_memory_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:
         try:
             usage = ResourceSampler.memory_usage()
         except Exception as exc:
             warn_skip("memory", exc)
             return
 
-        for index, rule in enumerate(rules):
-            threshold = float(rule["threshold"])
-            kind = str(rule.get("kind", "busy"))
-            triggered = compare(kind, usage.percent, threshold)
-            title = str(rule.get("title", f"MEM {kind}: {usage_text(usage)}"))
-            body = str(rule.get("body", f"Memory used is {usage_text(usage)}, threshold {pct(threshold)}"))
-            rule_id = str(rule.get("id", f"mem:{index}:{kind}"))
-            yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
+        options = self.rule_options(rule)
+        threshold = float(options["threshold"])
+        kind = str(options.get("kind", "busy"))
+        triggered = compare(kind, usage.percent, threshold)
+        title = str(rule.get("title", f"MEM {kind}: {usage_text(usage)}"))
+        body = str(rule.get("body", f"Memory used is {usage_text(usage)}, threshold {pct(threshold)}"))
+        rule_id = str(rule["id"])
+        yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
 
-    def evaluate_disk_rules(self) -> Iterable[RuleResult]:
-        rules = self.config.get("resources", {}).get("disk", [])
-        for index, rule in enumerate(rules):
-            mount_point = str(rule["mount"])
-            try:
-                usage = ResourceSampler.disk_usage(mount_point)
-            except Exception as exc:
-                warn_skip(f"disk {mount_point}", exc)
-                continue
-            threshold = float(rule["threshold"])
-            kind = str(rule.get("kind", "busy"))
-            triggered = compare(kind, usage.percent, threshold)
-            title = str(rule.get("title", f"Disk {kind}: {mount_point} {usage_text(usage)}"))
-            body = str(rule.get("body", f"Disk {mount_point} used is {usage_text(usage)}, threshold {pct(threshold)}"))
-            rule_id = str(rule.get("id", f"disk:{index}:{mount_point}:{kind}"))
-            yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
-
-    def evaluate_gpu_rules(self) -> Iterable[RuleResult]:
-        rules = self.config.get("resources", {}).get("gpu", [])
-        if not rules:
+    def evaluate_disk_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:
+        options = self.rule_options(rule)
+        mount_point = str(options["mount"])
+        try:
+            usage = ResourceSampler.disk_usage(mount_point)
+        except Exception as exc:
+            warn_skip(f"disk {mount_point}", exc)
             return
+        threshold = float(options["threshold"])
+        kind = str(options.get("kind", "busy"))
+        triggered = compare(kind, usage.percent, threshold)
+        title = str(rule.get("title", f"Disk {kind}: {mount_point} {usage_text(usage)}"))
+        body = str(rule.get("body", f"Disk {mount_point} used is {usage_text(usage)}, threshold {pct(threshold)}"))
+        rule_id = str(rule["id"])
+        yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
+
+    def evaluate_gpu_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:
         try:
             gpus = ResourceSampler.gpus()
         except Exception as exc:
             warn_skip("GPU metrics", exc)
             return
 
-        for index, rule in enumerate(rules):
-            selected_ids = normalize_ids(rule.get("ids"))
-            selected_uuids = normalize_ids(rule.get("uuids"))
-            selected = [
-                gpu
-                for gpu in gpus
-                if (selected_ids is None or str(gpu.id) in selected_ids)
-                and (selected_uuids is None or str(gpu.uuid) in selected_uuids)
-            ]
-            if not selected:
-                logger.warning("GPU rule %r matched no GPUs; skipping", rule.get("id", index))
-                continue
+        options = self.rule_options(rule)
+        selected_ids = normalize_ids(options.get("ids"))
+        selected_uuids = normalize_ids(options.get("uuids"))
+        selected = [
+            gpu
+            for gpu in gpus
+            if (selected_ids is None or str(gpu.id) in selected_ids)
+            and (selected_uuids is None or str(gpu.uuid) in selected_uuids)
+        ]
+        if not selected:
+            logger.warning("GPU rule %r matched no GPUs; skipping", rule["id"])
+            return
 
-            mode = str(rule.get("mode", "both"))
-            kind = str(rule.get("kind", "idle"))
-            match = str(rule.get("match", "any"))
-            checks = self.gpu_checks(rule, selected, mode, kind)
-            if match == "all":
-                triggered = all(item[0] for item in checks)
-            elif match == "any":
-                triggered = any(item[0] for item in checks)
-            else:
-                raise ValueError("GPU rule match must be 'any' or 'all'")
+        mode = str(options.get("mode", "both"))
+        kind = str(options.get("kind", "idle"))
+        match = str(options.get("match", "any"))
+        checks = self.gpu_checks(options, selected, mode, kind)
+        if match == "all":
+            triggered = all(item[0] for item in checks)
+        elif match == "any":
+            triggered = any(item[0] for item in checks)
+        else:
+            raise ValueError("GPU rule match must be 'any' or 'all'")
 
-            metric_text = ", ".join(item[1] for item in checks)
-            title = str(rule.get("title", f"GPU {kind}: {metric_text}"))
-            body = str(rule.get("body", metric_text))
-            rule_id = str(rule.get("id", f"gpu:{index}:{mode}:{kind}"))
-            yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
+        metric_text = ", ".join(item[1] for item in checks)
+        title = str(rule.get("title", f"GPU {kind}: {metric_text}"))
+        body = str(rule.get("body", metric_text))
+        rule_id = str(rule["id"])
+        yield build_result(rule, rule_id, triggered, title, body, event_kind(kind, rule), self.config)
 
     def gpu_checks(
         self,
-        rule: Dict[str, Any],
+        options: Dict[str, Any],
         gpus: Iterable[Any],
         mode: str,
         kind: str,
@@ -137,7 +141,9 @@ class RuleEvaluator:
 
         for gpu in gpus:
             if use_compute:
-                threshold = float(rule.get("compute_threshold", rule.get("threshold", 5 if kind == "idle" else 90)))
+                threshold = float(
+                    options.get("compute_threshold", options.get("threshold", 5 if kind == "idle" else 90))
+                )
                 value = float(gpu.gpu_util)
                 checks.append(
                     (
@@ -146,7 +152,9 @@ class RuleEvaluator:
                     )
                 )
             if use_memory:
-                threshold = float(rule.get("memory_threshold", rule.get("threshold", 5 if kind == "idle" else 90)))
+                threshold = float(
+                    options.get("memory_threshold", options.get("threshold", 5 if kind == "idle" else 90))
+                )
                 value = float(gpu.mem_util)
                 checks.append(
                     (
@@ -159,10 +167,7 @@ class RuleEvaluator:
                 )
         return checks
 
-    def evaluate_process_rules(self) -> Iterable[RuleResult]:
-        rules = self.config.get("processes", [])
-        if not rules:
-            return
+    def evaluate_process_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:
         try:
             gpu_processes = ResourceSampler.gpu_processes()
         except Exception as exc:
@@ -170,32 +175,26 @@ class RuleEvaluator:
             return
 
         gpu_pids = {int(proc.pid) for proc in gpu_processes}
-        for index, rule in enumerate(rules):
-            pids = self.process_rule_pids(rule)
-            missing_pids = [pid for pid in pids if pid not in gpu_pids]
-            present_pids = [pid for pid in pids if pid in gpu_pids]
-            triggered = bool(missing_pids)
-            name = str(rule.get("name", ",".join(str(pid) for pid in pids)))
-            title = str(rule.get("title", f"GPU process disappeared: {name}"))
-            body = str(
-                rule.get(
-                    "body",
-                    (
-                        f"Missing GPU process PID(s): {missing_pids}; "
-                        f"still present PID(s): {present_pids}"
-                    ),
-                )
+        options = self.rule_options(rule)
+        pids = self.process_rule_pids(options)
+        missing_pids = [pid for pid in pids if pid not in gpu_pids]
+        present_pids = [pid for pid in pids if pid in gpu_pids]
+        triggered = bool(missing_pids)
+        name = str(options.get("name", ",".join(str(pid) for pid in pids)))
+        title = str(rule.get("title", f"GPU process disappeared: {name}"))
+        body = str(
+            rule.get(
+                "body",
+                (
+                    f"Missing GPU process PID(s): {missing_pids}; "
+                    f"still present PID(s): {present_pids}"
+                ),
             )
-            rule_id = str(rule.get("id", f"process:{','.join(str(pid) for pid in pids)}:{index}"))
-            yield build_result(rule, rule_id, triggered, title, body, "alert", self.config)
+        )
+        rule_id = str(rule["id"])
+        yield build_result(rule, rule_id, triggered, title, body, event_kind("busy", rule), self.config)
 
     @staticmethod
-    def process_rule_pids(rule: Dict[str, Any]) -> List[int]:
-        if "pids" in rule:
-            raw_pids = rule["pids"]
-            if not isinstance(raw_pids, list):
-                raise ValueError("process rule pids must be a list")
-            return [int(pid) for pid in raw_pids]
-        if "pid" in rule:
-            return [int(rule["pid"])]
-        raise ValueError("process rule requires pid or pids")
+    def process_rule_pids(options: Dict[str, Any]) -> List[int]:
+        raw_pids = options["pids"]
+        return [int(pid) for pid in raw_pids]

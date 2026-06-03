@@ -14,62 +14,70 @@
       "level": "active"
     }
   },
-  "resources": {
-    "cpu": [
-      {
-        "id": "cpu-pressure-high",
+  "rules": [
+    {
+      "id": "cpu-pressure-high",
+      "type": "cpu",
+      "notify": true,
+      "command": "echo \"$GPU_WATCHDOG_TITLE $GPU_WATCHDOG_BODY\"",
+      "options": {
         "kind": "busy",
         "metric": "some.avg10",
-        "threshold": 80,
-        "notify": true,
-        "command": "echo \"$GPU_WATCHDOG_TITLE $GPU_WATCHDOG_BODY\""
+        "threshold": 80
       }
-    ],
-    "mem": [
-      {
-        "id": "mem-high",
+    },
+    {
+      "id": "mem-high",
+      "type": "memory",
+      "notify": true,
+      "options": {
         "kind": "busy",
-        "threshold": 90,
-        "notify": true
+        "threshold": 90
       }
-    ],
-    "disk": [
-      {
-        "id": "root-disk-high",
+    },
+    {
+      "id": "root-disk-high",
+      "type": "disk",
+      "notify": true,
+      "options": {
         "kind": "busy",
         "mount": "/",
-        "threshold": 90,
-        "notify": true
+        "threshold": 90
       }
-    ],
-    "gpu": [
-      {
-        "id": "gpu0-memory-idle",
+    },
+    {
+      "id": "gpu0-memory-idle",
+      "type": "gpu",
+      "notify": true,
+      "command": "echo \"GPU 0 memory is idle\"",
+      "options": {
         "kind": "idle",
         "ids": ["0"],
         "mode": "memory",
-        "threshold": 5,
-        "notify": true,
-        "command": "echo \"GPU 0 memory is idle\""
-      },
-      {
-        "id": "any-gpu-busy",
+        "threshold": 5
+      }
+    },
+    {
+      "id": "any-gpu-busy",
+      "type": "gpu",
+      "notify": true,
+      "options": {
         "kind": "busy",
         "mode": "both",
         "match": "any",
         "compute_threshold": 95,
-        "memory_threshold": 95,
-        "notify": true
+        "memory_threshold": 95
       }
-    ]
-  },
-  "processes": [
+    },
     {
       "id": "train-pid-watch",
-      "name": "training",
-      "pids": [12345, 23456],
+      "type": "process",
       "notify": true,
-      "command": "echo \"training process disappeared\""
+      "command": "echo \"training process disappeared\"",
+      "options": {
+        "name": "training",
+        "pids": [12345, 23456]
+      }
     }
   ]
 }

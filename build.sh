@@ -110,7 +110,7 @@ python3 "${OUT_FILE}" --samples >/dev/null 2>&1
 
 TEST_CONFIG="$(mktemp)"
 trap 'rm -f "${TEST_CONFIG}"' EXIT
-printf '{"interval_seconds": 1, "cooldown_seconds": 1, "resources": {}, "processes": []}\n' >"${TEST_CONFIG}"
+printf '{"interval_seconds": 1, "cooldown_seconds": 1, "rules": []}\n' >"${TEST_CONFIG}"
 python3 "${OUT_FILE}" --config "${TEST_CONFIG}" --once
 
 echo "Built and tested ${OUT_FILE}"
