@@ -4,6 +4,7 @@ import time
 from typing import Any, Dict
 
 from .callbacks import CommandRunner
+from .log import logger
 from .models import RuleResult, TriggerState
 from .notifiers import NotificationHub
 from .rules import RuleEvaluator
@@ -24,6 +25,7 @@ class Watchdog:
     def run_once(self) -> None:
         now = time.time()
         for result in self.evaluator.evaluate():
+            logger.debug("Evaluation result: %s", result)
             self.handle_result(result, now)
 
     def handle_result(self, result: RuleResult, now: float) -> None:
