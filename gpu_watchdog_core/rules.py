@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Tuple
 
 from .log import logger
 from .models import RuleResult
 from .sampler import ResourceSampler
 from .utils import build_result, compare, mib, pct, usage_text, warn_skip
+
+
+class GpuCheck(NamedTuple):
+    triggered: bool
+    gpu_id: str
+    metrics: List[str]
 
 
 class RuleEvaluator:
@@ -115,11 +121,30 @@ class RuleEvaluator:
         else:
             triggered = any(item[0] for item in checks)
 
-        metric_text = ", ".join(item[1] for item in checks)
-        title = rule.get("title", f"GPU {kind}: {metric_text}")
-        body = rule.get("body", metric_text)
+        title, body = self.gpu_notification_text(kind, checks)
+        title = rule.get("title", title)
+        body = rule.get("body", body)
         rule_id = rule["id"]
         yield build_result(rule, rule_id, triggered, title, body)
+
+    @staticmethod
+    def gpu_notification_text(kind: str, checks: Iterable[GpuCheck]) -> Tuple[str, str]:
+        check_list = list(checks)
+        total = len(check_list)
+        matched = sum(1 for check in check_list if check.triggered)
+        title = f"GPU {kind}: {matched}/{total} GPU(s) matched"
+        lines = [f"GPU {kind} rule matched {matched}/{total} GPU(s)."]
+
+        for heading, triggered in (("Matched", True), ("Not matched", False)):
+            group = [check for check in check_list if check.triggered == triggered]
+            lines.append(f"\n# {heading} GPU(s):")
+            if not group:
+                lines.append("- None")
+                continue
+            for check in group:
+                metric_text = ", ".join(check.metrics)
+                lines.append(f"- GPU {check.gpu_id}: {metric_text}")
+        return title, "\n".join(lines)
 
     def gpu_checks(
         self,
@@ -127,8 +152,8 @@ class RuleEvaluator:
         gpus: Iterable[Any],
         kind: str,
         threshold_match: str,
-    ) -> List[Tuple[bool, str]]:
-        checks: List[Tuple[bool, str]] = []
+    ) -> List[GpuCheck]:
+        checks: List[GpuCheck] = []
         thresholds = options["threshold"]
         use_compute = "compute" in thresholds
         use_memory = "memory" in thresholds
@@ -141,7 +166,7 @@ class RuleEvaluator:
                 metric_checks.append(
                     (
                         compare(kind, value, threshold),
-                        f"GPU {gpu.id} compute {pct(value)} threshold {pct(threshold)}",
+                        f"compute: {pct(value)} (threshold {pct(threshold)})",
                     )
                 )
             if use_memory:
@@ -151,8 +176,8 @@ class RuleEvaluator:
                     (
                         compare(kind, value, threshold),
                         (
-                            f"GPU {gpu.id} memory {mib(float(gpu.mem_used))} / "
-                            f"{mib(float(gpu.mem_total))} ({pct(value)}) threshold {pct(threshold)}"
+                            f"memory: {mib(float(gpu.mem_used))} / "
+                            f"{mib(float(gpu.mem_total))} ({pct(value)}, threshold {pct(threshold)})"
                         ),
                     )
                 )
@@ -160,7 +185,7 @@ class RuleEvaluator:
                 triggered = any(item[0] for item in metric_checks)
             else:
                 triggered = all(item[0] for item in metric_checks)
-            checks.append((triggered, "; ".join(item[1] for item in metric_checks)))
+            checks.append(GpuCheck(triggered, str(gpu.id), [item[1] for item in metric_checks]))
         return checks
 
     def evaluate_process_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:
