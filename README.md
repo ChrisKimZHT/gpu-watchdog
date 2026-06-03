@@ -56,11 +56,26 @@ Rule fields:
 - `event`: optional notification kind, either `alert` or `reminder`.
 - `options`: object containing fields specific to the rule `type`.
 
-Resource rule options:
+CPU, memory, and disk rule options:
 
 - `kind`: `busy` for resource occupation alerts, `idle` for idle reminders.
-- `threshold`: percentage threshold for CPU pressure, memory, disk, and simple
-  GPU rules.
+- `threshold`: percentage threshold for CPU pressure, memory, and disk rules.
+
+GPU rule options:
+
+- `kind`: `busy` for occupation alerts, `idle` for idle reminders.
+- `gpus`: GPU IDs to check, as strings matching `nvidia-smi` output. When omitted,
+  all visible GPUs are checked.
+- `gpu_match`: `any` or `all`. This is applied across the selected GPU IDs.
+- `threshold_match`: optional `any` or `all`. This is applied across configured
+  thresholds on each GPU.
+- `threshold`: object containing optional `compute` and `memory` percentage
+  thresholds.
+
+For `busy` GPU rules, a GPU is triggered when any configured threshold is met or
+exceeded. For `idle` GPU rules, a GPU is triggered when all configured thresholds
+have fallen back to or below their values. Set `threshold_match` to override this
+default. Thresholds that are not configured are not checked.
 
 Callback commands receive these environment variables:
 
@@ -82,11 +97,8 @@ percentage.
 Disk rules monitor one `options.mount` point per rule with `shutil.disk_usage`.
 The sampler returns total bytes, used bytes, and used percentage.
 
-GPU rules use the provided `nvsmi.py` interface. Set `options.mode` to
-`compute`, `memory`, or `both`. Set `options.match` to `any` or `all` when
-multiple GPUs or multiple metrics are checked. GPU IDs are strings, matching
-`nvidia-smi` output. GPU memory descriptions include used memory, total memory,
-and percentage.
+GPU rules use the provided `nvsmi.py` interface. GPU memory descriptions include
+used memory, total memory, and percentage.
 
 Process rules watch whether one or more PIDs are still present in the
 `nvidia-smi` compute process list. Set `options.pids` to the process IDs to

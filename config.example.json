@@ -52,9 +52,11 @@
       "command": "echo \"GPU 0 memory is idle\"",
       "options": {
         "kind": "idle",
-        "ids": ["0"],
-        "mode": "memory",
-        "threshold": 5
+        "gpus": ["0"],
+        "gpu_match": "any",
+        "threshold": {
+          "memory": 5
+        }
       }
     },
     {
@@ -63,10 +65,13 @@
       "notify": true,
       "options": {
         "kind": "busy",
-        "mode": "both",
-        "match": "any",
-        "compute_threshold": 95,
-        "memory_threshold": 95
+        "gpus": ["0"],
+        "gpu_match": "any",
+        "threshold_match": "any",
+        "threshold": {
+          "compute": 95,
+          "memory": 95
+        }
       }
     },
     {

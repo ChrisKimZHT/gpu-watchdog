@@ -97,28 +97,26 @@ class RuleEvaluator:
             return
 
         options = self.rule_options(rule)
-        selected_ids = normalize_ids(options.get("ids"))
-        selected_uuids = normalize_ids(options.get("uuids"))
+        selected_gpus = normalize_ids(options.get("gpus"))
         selected = [
             gpu
             for gpu in gpus
-            if (selected_ids is None or str(gpu.id) in selected_ids)
-            and (selected_uuids is None or str(gpu.uuid) in selected_uuids)
+            if selected_gpus is None or str(gpu.id) in selected_gpus
         ]
         if not selected:
             logger.warning("GPU rule %r matched no GPUs; skipping", rule["id"])
             return
 
-        mode = str(options.get("mode", "both"))
         kind = str(options.get("kind", "idle"))
-        match = str(options.get("match", "any"))
-        checks = self.gpu_checks(options, selected, mode, kind)
-        if match == "all":
+        gpu_match = str(options.get("gpu_match", "any"))
+        threshold_match = str(options.get("threshold_match", "any" if kind == "busy" else "all"))
+        checks = self.gpu_checks(options, selected, kind, threshold_match)
+        if gpu_match == "all":
             triggered = all(item[0] for item in checks)
-        elif match == "any":
+        elif gpu_match == "any":
             triggered = any(item[0] for item in checks)
         else:
-            raise ValueError("GPU rule match must be 'any' or 'all'")
+            raise ValueError("GPU rule gpu_match must be 'any' or 'all'")
 
         metric_text = ", ".join(item[1] for item in checks)
         title = str(rule.get("title", f"GPU {kind}: {metric_text}"))
@@ -130,33 +128,35 @@ class RuleEvaluator:
         self,
         options: Dict[str, Any],
         gpus: Iterable[Any],
-        mode: str,
         kind: str,
+        threshold_match: str,
     ) -> List[Tuple[bool, str]]:
         checks: List[Tuple[bool, str]] = []
-        use_compute = mode in {"compute", "both"}
-        use_memory = mode in {"memory", "both"}
+        thresholds = options.get("threshold", {})
+        if not isinstance(thresholds, dict):
+            raise ValueError("GPU rule threshold must be an object with compute and/or memory")
+        use_compute = "compute" in thresholds
+        use_memory = "memory" in thresholds
         if not use_compute and not use_memory:
-            raise ValueError("GPU rule mode must be 'compute', 'memory', or 'both'")
+            raise ValueError("GPU rule threshold requires compute, memory, or both")
+        if threshold_match not in {"any", "all"}:
+            raise ValueError("GPU rule threshold_match must be 'any' or 'all'")
 
         for gpu in gpus:
+            metric_checks: List[Tuple[bool, str]] = []
             if use_compute:
-                threshold = float(
-                    options.get("compute_threshold", options.get("threshold", 5 if kind == "idle" else 90))
-                )
+                threshold = float(thresholds["compute"])
                 value = float(gpu.gpu_util)
-                checks.append(
+                metric_checks.append(
                     (
                         compare(kind, value, threshold),
                         f"GPU {gpu.id} compute {pct(value)} threshold {pct(threshold)}",
                     )
                 )
             if use_memory:
-                threshold = float(
-                    options.get("memory_threshold", options.get("threshold", 5 if kind == "idle" else 90))
-                )
+                threshold = float(thresholds["memory"])
                 value = float(gpu.mem_util)
-                checks.append(
+                metric_checks.append(
                     (
                         compare(kind, value, threshold),
                         (
@@ -165,6 +165,13 @@ class RuleEvaluator:
                         ),
                     )
                 )
+            if threshold_match == "any":
+                triggered = any(item[0] for item in metric_checks)
+            elif threshold_match == "all":
+                triggered = all(item[0] for item in metric_checks)
+            else:
+                raise ValueError("GPU rule threshold_match must be 'any' or 'all'")
+            checks.append((triggered, "; ".join(item[1] for item in metric_checks)))
         return checks
 
     def evaluate_process_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:
