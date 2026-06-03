@@ -4,6 +4,7 @@ import time
 from typing import Any, Dict
 
 from .callbacks import CommandRunner
+from .config import normalize_config
 from .log import logger
 from .models import RuleResult, TriggerState
 from .notifiers import NotificationHub
@@ -12,9 +13,9 @@ from .rules import RuleEvaluator
 
 class Watchdog:
     def __init__(self, config: Dict[str, Any]) -> None:
-        self.config = config
-        self.evaluator = RuleEvaluator(config)
-        self.notifier = NotificationHub.from_config(config)
+        self.config = normalize_config(config)
+        self.evaluator = RuleEvaluator(self.config)
+        self.notifier = NotificationHub.from_config(self.config)
         self.states: Dict[str, TriggerState] = {}
 
     def run_forever(self, interval_seconds: float) -> None:

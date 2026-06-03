@@ -27,17 +27,15 @@ class BarkNotifier(Notifier):
     PROJECT_KEYS = {"enabled", "server", "device_key", "timeout_seconds", "level"}
 
     def __init__(self, config: Dict[str, Any]) -> None:
-        self.server = str(config.get("server", "https://api.day.app")).rstrip("/")
-        self.device_key = str(config.get("device_key", "")).strip()
-        self.timeout_seconds = float(config.get("timeout_seconds", 10))
-        self.reminder_level = str(config.get("level", "active"))
+        self.server = config["server"]
+        self.device_key = config["device_key"]
+        self.timeout_seconds = config["timeout_seconds"]
+        self.reminder_level = config["level"]
         self.options = {
             key: value
             for key, value in config.items()
             if key not in self.PROJECT_KEYS and value is not None
         }
-        if not self.device_key:
-            raise ValueError("notifiers.bark.device_key is required when Bark is enabled")
 
     def notify(self, title: str, body: str, kind: NotificationKind) -> None:
         payload = dict(self.options)
@@ -67,10 +65,10 @@ class NotificationHub:
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "NotificationHub":
         notifiers: List[Notifier] = [LoggerNotifier()]
-        notifier_config = config.get("notifiers", {})
+        notifier_config = config["notifiers"]
 
         bark_config = notifier_config.get("bark")
-        if bark_config and bark_config.get("enabled", True):
+        if bark_config and bark_config["enabled"]:
             notifiers.append(BarkNotifier(bark_config))
 
         return cls(notifiers)

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .config import normalize_config
 from .diagnostics import print_samples
 from .log import configure_logging, logger
 from .watchdog import Watchdog
@@ -15,9 +16,7 @@ DEFAULT_CONFIG_PATH = Path("config.json")
 def load_config(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as handle:
         config = json.load(handle)
-    if not isinstance(config, dict):
-        raise ValueError("config must be a JSON object")
-    return config
+    return normalize_config(config)
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -38,7 +37,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         config_path = str(DEFAULT_CONFIG_PATH)
 
     config = load_config(config_path) if config_path else {}
-    configure_logging(str(config.get("log_level", "INFO")))
+    configure_logging(config["log_level"] if config else "INFO")
 
     if args.samples:
         print_samples()
@@ -48,11 +47,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.error("--config is required unless ./config.json exists")
         return 2
 
-    interval_seconds = float(config["interval_seconds"])
     watchdog = Watchdog(config)
 
     if args.once:
         watchdog.run_once()
     else:
-        watchdog.run_forever(interval_seconds)
+        watchdog.run_forever(config["interval_seconds"])
     return 0

@@ -21,7 +21,8 @@ loads `./config.json`; if that file does not exist, it exits with an error.
 ## Layout
 
 - `gpu_watchdog.py`: thin command-line entry point.
-- `gpu_watchdog_core/cli.py`: argument parsing, config loading, and command dispatch.
+- `gpu_watchdog_core/cli.py`: argument parsing, config file loading, and command dispatch.
+- `gpu_watchdog_core/config.py`: config validation and default value normalization.
 - `gpu_watchdog_core/diagnostics.py`: formatted sample diagnostics.
 - `gpu_watchdog_core/sampler.py`: CPU, memory, disk, GPU, and GPU process sampling.
 - `gpu_watchdog_core/rules.py`: unified rule evaluation.
@@ -39,7 +40,7 @@ Top-level options:
 - `interval_seconds`: required polling interval.
 - `cooldown_seconds`: default minimum seconds between repeated triggers for the
   same active rule. Required top-level option.
-- `log_level`: standard Python logging level.
+- `log_level`: standard Python logging level. Defaults to `INFO`.
 - Logger notifications are always enabled.
 - `notifiers.bark`: Bark settings. `enabled`, `server`, `device_key`,
   `timeout_seconds`, and `level` are consumed by this project; all other
@@ -57,19 +58,24 @@ Rule fields:
   notification and callback execution. Defaults to `0`. If the rule recovers
   before this duration, the timer is reset.
 - `event`: optional notification kind, either `alert` or `reminder`.
+  Defaults to `alert` for `busy` rules and process rules, or `reminder` for
+  `idle` rules.
 - `options`: object containing fields specific to the rule `type`.
 
 CPU, memory, and disk rule options:
 
 - `kind`: `busy` for resource occupation alerts, `idle` for idle reminders.
+  Defaults to `busy`.
 - `threshold`: percentage threshold for CPU pressure, memory, and disk rules.
 
 GPU rule options:
 
-- `kind`: `busy` for occupation alerts, `idle` for idle reminders.
+- `kind`: `busy` for occupation alerts, `idle` for idle reminders. Defaults to
+  `idle`.
 - `gpus`: GPU IDs to check, as strings matching `nvidia-smi` output. When omitted,
   all visible GPUs are checked.
 - `gpu_match`: `any` or `all`. This is applied across the selected GPU IDs.
+  Defaults to `any`.
 - `threshold_match`: optional `any` or `all`. This is applied across configured
   thresholds on each GPU.
 - `threshold`: object containing optional `compute` and `memory` percentage
