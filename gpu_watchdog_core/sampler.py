@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ctypes
+import os
 import shutil
 from typing import Any, Dict, List
 
@@ -29,9 +31,15 @@ class ResourceSampler:
         return result
 
     @staticmethod
-    def memory_usage(path: str = "/proc/meminfo") -> ResourceUsage:
+    def memory_usage() -> ResourceUsage:
+        if os.name == "nt":
+            return ResourceSampler._windows_memory_usage()
+        return ResourceSampler._meminfo_memory_usage()
+
+    @staticmethod
+    def _meminfo_memory_usage() -> ResourceUsage:
         values: Dict[str, float] = {}
-        with open(path, "r", encoding="utf-8") as handle:
+        with open("/proc/meminfo", "r", encoding="utf-8") as handle:
             for raw_line in handle:
                 if ":" not in raw_line:
                     continue
@@ -57,6 +65,36 @@ class ResourceSampler:
         return ResourceUsage(
             total=total * 1024,
             used=used * 1024,
+            percent=used / total * 100.0,
+        )
+
+    @staticmethod
+    def _windows_memory_usage() -> ResourceUsage:
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        status = MEMORYSTATUSEX()
+        status.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+            raise ctypes.WinError()
+
+        total = float(status.ullTotalPhys)
+        if total <= 0:
+            raise RuntimeError("physical memory total is zero")
+        used = float(status.ullTotalPhys - status.ullAvailPhys)
+        return ResourceUsage(
+            total=total,
+            used=used,
             percent=used / total * 100.0,
         )
 

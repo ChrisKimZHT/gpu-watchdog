@@ -108,9 +108,9 @@ CPU rules use `/proc/pressure/cpu`. The default `options.metric` is
 `some.avg10`; other PSI fields such as `some.avg60`, `some.avg300`, or
 `full.avg10` can be configured when available on the host.
 
-Memory uses `/proc/meminfo` and monitors used percentage based on
-`MemAvailable`. The sampler returns total bytes, used bytes, and used
-percentage.
+Memory uses `/proc/meminfo` on Linux, based on `MemAvailable`, and
+`GlobalMemoryStatusEx` on Windows. The sampler returns total bytes, used bytes,
+and used percentage.
 
 Disk rules monitor one `options.mount` point per rule with `shutil.disk_usage`.
 The sampler returns total bytes, used bytes, and used percentage.
