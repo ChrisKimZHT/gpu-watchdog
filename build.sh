@@ -43,6 +43,10 @@ import importlib.abc
 import importlib.machinery
 import sys
 
+# place embedded config here for real one file distribution, can be overridden by --config or ./config.json
+EMBEDDED_CONFIG="""
+
+""".strip()
 
 _SOURCES = {json.dumps(sources, ensure_ascii=False, indent=2)}
 _PACKAGES = {{"gpu_watchdog_core"}}
@@ -82,9 +86,10 @@ def _install_importer():
 
 def main(argv=None):
     _install_importer()
-    from gpu_watchdog_core.cli import main as cli_main
+    from gpu_watchdog_core import cli as cli_module
 
-    return cli_main(argv)
+    cli_module.EMBEDDED_CONFIG = EMBEDDED_CONFIG
+    return cli_module.main(argv)
 
 
 if __name__ == "__main__":

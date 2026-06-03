@@ -12,11 +12,17 @@ from . import __version__
 from .watchdog import Watchdog
 
 DEFAULT_CONFIG_PATH = Path("config.json")
+EMBEDDED_CONFIG = ""
 
 
 def load_config(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as handle:
         config = json.load(handle)
+    return normalize_config(config)
+
+
+def load_config_text(config_text: str) -> Dict[str, Any]:
+    config = json.loads(config_text)
     return normalize_config(config)
 
 
@@ -35,17 +41,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     # command line; None preserves argparse's normal sys.argv[1:] path.
     args = parse_args(argv)
     config_path = args.config
-    if not config_path and not args.samples and DEFAULT_CONFIG_PATH.exists():
-        config_path = str(DEFAULT_CONFIG_PATH)
+    embedded_config = EMBEDDED_CONFIG.strip()
 
-    config = load_config(config_path) if config_path else {}
+    if config_path:  # if --config is provided, load it
+        config = load_config(config_path)
+    elif embedded_config:  # if EMBEDDED_CONFIG is set, load it
+        config = load_config_text(embedded_config)
+    elif DEFAULT_CONFIG_PATH.exists():  # if default config file exists, load it
+        config_path = str(DEFAULT_CONFIG_PATH)
+        config = load_config(config_path)
+    else:  # if no config is found, config is empty and will trigger an error later
+        config = {}
+
     configure_logging(config["log_level"] if config else "INFO")
 
     if args.samples:
         print_samples()
         return 0
 
-    if not config_path:
+    if not config:
         logger.error("--config is required unless ./config.json exists")
         return 2
 
