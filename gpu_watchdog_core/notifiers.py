@@ -120,5 +120,6 @@ class NotificationHub:
         for notifier in self.notifiers:
             try:
                 notifier.notify(title, body, kind)
+                logger.info("Notifier %s sent successfully", type(notifier).__name__)
             except Exception as exc:
                 logger.warning("Notifier %s failed: %s", type(notifier).__name__, exc)
