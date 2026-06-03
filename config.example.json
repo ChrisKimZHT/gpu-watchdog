@@ -2,7 +2,6 @@
   "interval_seconds": 30,
   "cooldown_seconds": 300,
   "log_level": "INFO",
-  "log_notifications": true,
   "notifiers": {
     "bark": {
       "enabled": false,

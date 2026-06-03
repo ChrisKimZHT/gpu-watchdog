@@ -15,7 +15,7 @@ class Notifier:
 
 class LoggerNotifier(Notifier):
     def notify(self, title: str, body: str, kind: NotificationKind) -> None:
-        notification_logger.info("%s %s: %s", kind.upper(), title, body)
+        notification_logger.info("%s | %s | %s", kind.upper(), title, body)
 
 
 class BarkNotifier(Notifier):
@@ -63,15 +63,12 @@ class NotificationHub:
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> "NotificationHub":
-        notifiers: List[Notifier] = []
+        notifiers: List[Notifier] = [LoggerNotifier()]
         notifier_config = config.get("notifiers", {})
 
         bark_config = notifier_config.get("bark")
         if bark_config and bark_config.get("enabled", True):
             notifiers.append(BarkNotifier(bark_config))
-
-        if config.get("log_notifications", config.get("stdout", True)):
-            notifiers.append(LoggerNotifier())
 
         return cls(notifiers)
 

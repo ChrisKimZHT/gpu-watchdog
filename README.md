@@ -40,7 +40,7 @@ Top-level options:
 - `cooldown_seconds`: default minimum seconds between repeated triggers for the
   same active rule. Required top-level option.
 - `log_level`: standard Python logging level.
-- `log_notifications`: also emit notifications through the configured logger.
+- Logger notifications are always enabled.
 - `notifiers.bark`: Bark settings. `enabled`, `server`, `device_key`,
   `timeout_seconds`, and `level` are consumed by this project; all other
   non-null fields are passed through to Bark in the POST body. Alert events
