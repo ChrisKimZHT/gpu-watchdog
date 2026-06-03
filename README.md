@@ -25,6 +25,18 @@ python3 gpu_watchdog.py --config config_examples/crash_notification.json
 
 省略 `--config` 时，程序会默认加载 `./config.json`。完整配置示例可见 `config_examples/full_config.json`，详细配置见下文。
 
+### 单文件用法
+
+在 Linux 环境下使用脚本 `./build.sh` 构建生成单文件，生成结果储在 `dist/gpu_watchdog.py`，单文件的用法和正常版本完全一致。
+
+单文件支持嵌入配置文件，以实现真正的一个 `.py` 文件直接运行，在生成的单文件顶部找到 `EMBEDDED_CONFIG` 参数，把 `config.json` 内容粘贴进去即可。
+
+```python
+EMBEDDED_CONFIG="""
+
+"""
+```
+
 ## 架构说明
 
 程序会按配置顺序循环执行每条规则，每条规则包含数据采集、规则判断、通知/回调三步，执行所有规则后等待 n 秒后继续下一轮：
