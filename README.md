@@ -23,7 +23,7 @@ python3 gpu_watchdog.py --config config_examples/disk_full_notification.json
 python3 gpu_watchdog.py --config config_examples/crash_notification.json
 ```
 
-省略 `--config` 时，程序会默认加载 `./config.json`。完整配置示例可见 `config_examples/full_config.json`，详细配置见下文。
+省略 `--config` 时，程序会默认加载 `./config.json`，配置文件修改会自动热重载。完整配置示例可见 `config_examples/full_config.json`，详细配置见下文。
 
 ### 单文件用法
 
