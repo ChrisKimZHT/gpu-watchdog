@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Mapping, MutableMapping
 
 
@@ -168,7 +169,7 @@ def _normalize_rule(raw_rule: Any, index: int, default_cooldown_seconds: float) 
     if "body" in rule:
         normalized["body"] = str(rule["body"])
     if "command" in rule:
-        _validate_command(rule["command"], f"{path}.command")
+        normalized["command"] = _normalize_command(rule["command"], f"{path}.command")
 
     return normalized
 
@@ -347,15 +348,28 @@ def _int_list(value: Any, path: str) -> List[int]:
         raise ValueError(f"{path} must contain only integer values") from exc
 
 
-def _validate_command(value: Any, path: str) -> None:
+def _normalize_command(value: Any, path: str) -> Any:
     if isinstance(value, str):
-        return
+        return value
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
-        return
+        return value
     if isinstance(value, dict):
         _validate_advanced_command(value, path)
-        return
+        return _normalize_advanced_command(value)
     raise ValueError(f"{path} must be a string, a list of strings, or an object")
+
+
+def _normalize_advanced_command(command: Mapping[str, Any]) -> Dict[str, Any]:
+    normalized = dict(command)
+    for name in ("stdin", "stdout", "stderr", "cwd"):
+        value = normalized.get(name)
+        if value is not None:
+            normalized[name] = _expand_path(value)
+    return normalized
+
+
+def _expand_path(value: str) -> str:
+    return os.path.expandvars(os.path.expanduser(value))
 
 
 def _validate_advanced_command(command: Mapping[str, Any], path: str) -> None:
