@@ -268,13 +268,13 @@ GPU 规则通过 `nvidia-smi` 读取 GPU 利用率和显存使用率。`threshol
     {
       "command": {
         "command": ["sh", "-c", "cat"], // 实际执行的指令，string 会通过 shell 执行，list 会直接执行
-        "env": { "APP_ENV": "prod" },   // [可选] 自定义环境变量，值会转为字符串
-        "env_mode": "merge",            // [可选] merge 透传当前环境并增量覆盖；replace 只使用 GPU_WATCHDOG_* 和 env
-        "stdin": "/tmp/input.txt",      // [可选] 指定 stdin 文件
-        "stdout": "/tmp/output.log",    // [可选] 指定 stdout 文件，以追加方式写入
-        "stderr": "/tmp/error.log",     // [可选] 指定 stderr 文件，以追加方式写入
-        "cwd": "/tmp",                  // [可选] 指定工作目录
-        "start_new_session": true       // [可选] 是否以新 session 启动子进程
+        "env": { "APP_ENV": "prod" },   // [可选] 自定义环境变量，值会转为字符串，默认为空
+        "env_mode": "merge",            // [可选] merge 透传当前环境并增量覆盖；replace 只使用 GPU_WATCHDOG_* 和 env，默认为 merge
+        "stdin": "/tmp/input.txt",      // [可选] 指定 stdin 文件，默认为继承父进程 stdin
+        "stdout": "/tmp/output.log",    // [可选] 指定 stdout 文件，以追加方式写入，默认为继承父进程 stdout
+        "stderr": "/tmp/error.log",     // [可选] 指定 stderr 文件，以追加方式写入，默认为继承父进程 stderr
+        "cwd": "/tmp",                  // [可选] 指定工作目录，默认为当前进程工作目录
+        "start_new_session": true       // [可选] 是否以新 session 启动子进程，默认为 false
       }
     }
   ]
