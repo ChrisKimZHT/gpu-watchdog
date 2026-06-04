@@ -1,11 +1,57 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, NamedTuple, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, NamedTuple, Tuple
 
 from .log import logger
 from .models import RuleResult
 from .sampler import ResourceSampler
 from .utils import build_result, compare, mib, pct, usage_text, warn_skip
+
+
+CPU_TITLE_TEMPLATE = "CPU <|kind|>: <|metric|> <|value|>"
+CPU_BODY_TEMPLATE = "CPU pressure <|metric|> is <|value|>, threshold <|threshold|>"
+
+MEMORY_TITLE_TEMPLATE = "MEM <|kind|>: <|usage|>"
+MEMORY_BODY_TEMPLATE = "Memory used is <|usage|>, threshold <|threshold|>"
+
+DISK_TITLE_TEMPLATE = "Disk <|kind|>: <|mount_point|> <|usage|>"
+DISK_BODY_TEMPLATE = "Disk <|mount_point|> used is <|usage|>, threshold <|threshold|>"
+
+GPU_TITLE_TEMPLATE = "GPU <|kind|>: <|matched|>/<|total|> GPU(s) matched"
+GPU_BODY_TEMPLATE = "\n".join([
+    "# Matched GPU(s):",
+    "<|matched_gpus|>",
+    "",
+    "# Not matched GPU(s):",
+    "<|not_matched_gpus|>",
+])
+
+PROCESS_TITLE_TEMPLATE = "GPU process disappeared: <|name|>"
+PROCESS_BODY_TEMPLATE = "\n".join([
+    "# Missing PID(s):",
+    "<|missing_pids|>",
+    "",
+    "# Alive PID(s):",
+    "<|present_pids|>"
+])
+
+
+def render_template(template: str, slots: Mapping[str, Any]) -> str:
+    text = template
+    for key, value in slots.items():
+        text = text.replace(f"<|{key}|>", str(value))
+    return text
+
+
+def render_rule_text(
+    rule: Dict[str, Any],
+    title_template: str,
+    body_template: str,
+    slots: Mapping[str, Any],
+) -> Tuple[str, str]:
+    title = render_template(rule.get("title", title_template), slots)
+    body = render_template(rule.get("body", body_template), slots)
+    return title, body
 
 
 class GpuCheck(NamedTuple):
@@ -57,8 +103,12 @@ class RuleEvaluator:
             logger.warning("CPU pressure metric %r is unavailable; skipping", metric)
             return
         triggered = compare(kind, value, threshold)
-        title = rule.get("title", f"CPU {kind}: {metric} {pct(value)}")
-        body = rule.get("body", f"CPU pressure {metric} is {pct(value)}, threshold {pct(threshold)}")
+        title, body = render_rule_text(rule, CPU_TITLE_TEMPLATE, CPU_BODY_TEMPLATE, {
+            "kind": kind,
+            "metric": metric,
+            "value": pct(value),
+            "threshold": pct(threshold),
+        })
         rule_id = rule["id"]
         yield build_result(rule, rule_id, triggered, title, body)
 
@@ -73,8 +123,11 @@ class RuleEvaluator:
         threshold = options["threshold"]
         kind = options["kind"]
         triggered = compare(kind, usage.percent, threshold)
-        title = rule.get("title", f"MEM {kind}: {usage_text(usage)}")
-        body = rule.get("body", f"Memory used is {usage_text(usage)}, threshold {pct(threshold)}")
+        title, body = render_rule_text(rule, MEMORY_TITLE_TEMPLATE, MEMORY_BODY_TEMPLATE, {
+            "kind": kind,
+            "usage": usage_text(usage),
+            "threshold": pct(threshold),
+        })
         rule_id = rule["id"]
         yield build_result(rule, rule_id, triggered, title, body)
 
@@ -89,8 +142,12 @@ class RuleEvaluator:
         threshold = options["threshold"]
         kind = options["kind"]
         triggered = compare(kind, usage.percent, threshold)
-        title = rule.get("title", f"Disk {kind}: {mount_point} {usage_text(usage)}")
-        body = rule.get("body", f"Disk {mount_point} used is {usage_text(usage)}, threshold {pct(threshold)}")
+        title, body = render_rule_text(rule, DISK_TITLE_TEMPLATE, DISK_BODY_TEMPLATE, {
+            "kind": kind,
+            "mount_point": mount_point,
+            "usage": usage_text(usage),
+            "threshold": pct(threshold),
+        })
         rule_id = rule["id"]
         yield build_result(rule, rule_id, triggered, title, body)
 
@@ -121,30 +178,34 @@ class RuleEvaluator:
         else:
             triggered = any(item[0] for item in checks)
 
-        title, body = self.gpu_notification_text(kind, checks)
-        title = rule.get("title", title)
-        body = rule.get("body", body)
+        slots = self.gpu_notification_slots(kind, checks)
+        title, body = render_rule_text(rule, GPU_TITLE_TEMPLATE, GPU_BODY_TEMPLATE, slots)
         rule_id = rule["id"]
         yield build_result(rule, rule_id, triggered, title, body)
 
     @staticmethod
-    def gpu_notification_text(kind: str, checks: Iterable[GpuCheck]) -> Tuple[str, str]:
+    def gpu_notification_slots(kind: str, checks: Iterable[GpuCheck]) -> Dict[str, Any]:
         check_list = list(checks)
         total = len(check_list)
         matched = sum(1 for check in check_list if check.triggered)
-        title = f"GPU {kind}: {matched}/{total} GPU(s) matched"
-        lines = [f"GPU {kind} rule matched {matched}/{total} GPU(s)."]
+        slots = {
+            "kind": kind,
+            "matched": matched,
+            "total": total,
+            "matched_gpus": RuleEvaluator.gpu_group_text(check_list, True),
+            "not_matched_gpus": RuleEvaluator.gpu_group_text(check_list, False),
+        }
+        return slots
 
-        for heading, triggered in (("Matched", True), ("Not matched", False)):
-            group = [check for check in check_list if check.triggered == triggered]
-            lines.append(f"\n# {heading} GPU(s):")
-            if not group:
-                lines.append("- None")
-                continue
-            for check in group:
-                metric_text = ", ".join(check.metrics)
-                lines.append(f"- GPU {check.gpu_id}: {metric_text}")
-        return title, "\n".join(lines)
+    @staticmethod
+    def gpu_group_text(checks: Iterable[GpuCheck], triggered: bool) -> str:
+        group = [check for check in checks if check.triggered == triggered]
+        if not group:
+            return "- None"
+        return "\n".join(
+            f"- GPU {check.gpu_id} | {' | '.join(check.metrics)}"
+            for check in group
+        )
 
     def gpu_checks(
         self,
@@ -163,24 +224,13 @@ class RuleEvaluator:
             if use_compute:
                 threshold = thresholds["compute"]
                 value = float(gpu.gpu_util)
-                metric_checks.append(
-                    (
-                        compare(kind, value, threshold),
-                        f"compute: {pct(value)} (threshold {pct(threshold)})",
-                    )
-                )
+                message = f"compute: {pct(value)} (thr. {pct(threshold)})"
+                metric_checks.append((compare(kind, value, threshold), message))
             if use_memory:
                 threshold = thresholds["memory"]
                 value = float(gpu.mem_util)
-                metric_checks.append(
-                    (
-                        compare(kind, value, threshold),
-                        (
-                            f"memory: {mib(float(gpu.mem_used))} / "
-                            f"{mib(float(gpu.mem_total))} ({pct(value)}, threshold {pct(threshold)})"
-                        ),
-                    )
-                )
+                message = f"memory: {mib(float(gpu.mem_used))} / {mib(float(gpu.mem_total))} ({pct(value)}, thr. {pct(threshold)})"
+                metric_checks.append((compare(kind, value, threshold), message))
             if threshold_match == "any":
                 triggered = any(item[0] for item in metric_checks)
             else:
@@ -202,14 +252,11 @@ class RuleEvaluator:
         present_pids = [pid for pid in pids if pid in gpu_pids]
         triggered = bool(missing_pids)
         name = options["name"]
-        title = rule.get("title", f"GPU process disappeared: {name}")
-        body = rule.get(
-            "body",
-            (
-                f"Missing GPU process PID(s): {missing_pids}; "
-                f"still present PID(s): {present_pids}"
-            ),
-        )
+        title, body = render_rule_text(rule, PROCESS_TITLE_TEMPLATE, PROCESS_BODY_TEMPLATE, {
+            "name": name,
+            "missing_pids": missing_pids,
+            "present_pids": present_pids
+        })
         rule_id = rule["id"]
         yield build_result(rule, rule_id, triggered, title, body)
 

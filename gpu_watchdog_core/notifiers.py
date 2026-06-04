@@ -18,10 +18,11 @@ class Notifier:
 
 class LoggerNotifier(Notifier):
     def notify(self, title: str, body: str, kind: NotificationKind) -> None:
+        message = f"<{kind.upper()}> {title}\n{body}"
         if kind == "reminder":
-            logger.warning("%s | %s | %s", kind.upper(), title, body)
-        else: # kind == "alert"
-            logger.critical("%s | %s | %s", kind.upper(), title, body)
+            logger.warning(message)
+        else:  # kind == "alert"
+            logger.critical(message)
 
 
 class BarkNotifier(Notifier):
