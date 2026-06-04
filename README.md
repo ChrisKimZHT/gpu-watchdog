@@ -13,6 +13,9 @@ python3 gpu_watchdog.py --samples
 # 配置示例：空闲 GPU 自动提醒（适用于实验室公用服务器抢卡等场景）
 python3 gpu_watchdog.py --config config_examples/idle_gpu_notification.json
 
+# 配置示例：空闲 GPU 自动启动训练（抢卡后自动开始训练的场景）
+python3 gpu_watchdog.py --config config_examples/idle_gpu_start_train.json
+
 # 配置示例：空闲 GPU 自动关机（适用于 AutoDL 等按量付费场景）
 python3 gpu_watchdog.py --config config_examples/idle_auto_shutdown.json
 

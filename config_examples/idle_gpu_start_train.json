@@ -1,0 +1,55 @@
+{
+  "interval_seconds": 10,
+  "cooldown_seconds": 300,
+  "log_level": "INFO",
+  "notifiers": {
+    "smtp": {
+      "enabled": false,
+      "host": "smtp.example.com",
+      "port": 587,
+      "username": "REPLACE_WITH_SMTP_USERNAME",
+      "password": "REPLACE_WITH_SMTP_PASSWORD",
+      "from_addr": "watchdog@example.com",
+      "to_addrs": [
+        "admin@example.com"
+      ],
+      "timeout_seconds": 10,
+      "ssl": true,
+      "starttls": false
+    }
+  },
+  "rules": [
+    {
+      "id": "any-gpu-idle",
+      "type": "gpu",
+      "notify": true,
+      "cooldown_seconds": 8640000,
+      "pending_period": 10,
+      "options": {
+        "kind": "idle",
+        "gpu_match": "any",
+        "threshold": {
+          "memory": 20
+        }
+      },
+      "command": {
+        "command": [
+          "/home/chriskim/anaconda3/envs/pytorch/bin/python",
+          "/home/chriskim/gpu-watchdog/tests/stress_gpu.py",
+          "--compute",
+          "--percent",
+          "50",
+          "--duration",
+          "60"
+        ],
+        "env": {
+          "CUDA_VISIBLE_DEVICES": "0"
+        },
+        "stdout": "callback_stdout.log",
+        "stderr": "callback_stderr.log",
+        "cwd": "/home/chriskim/gpu-watchdog",
+        "start_new_session": true
+      }
+    }
+  ]
+}
