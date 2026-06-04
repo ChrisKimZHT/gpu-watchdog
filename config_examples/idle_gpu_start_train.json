@@ -34,20 +34,23 @@
       },
       "command": {
         "command": [
-          "/home/chriskim/anaconda3/envs/pytorch/bin/python",
-          "/home/chriskim/gpu-watchdog/tests/stress_gpu.py",
+          "CUDA_VISIBLE_DEVICES=$GPU_WATCHDOG_EXTRAENV_MATCHED_GPUS",
+          "~/anaconda3/envs/pytorch/bin/python",
+          "-u",
+          "-m torch.distributed.run",
+          "--nproc_per_node=$GPU_WATCHDOG_EXTRAENV_MATCHED_GPU_COUNT",
+          "~/gpu-watchdog/tests/stress_gpu.py",
           "--compute",
-          "--percent",
-          "50",
-          "--duration",
-          "60"
+          "--percent $MYENV_PERCENT",
+          "--duration $MYENV_DURATION"
         ],
         "env": {
-          "CUDA_VISIBLE_DEVICES": "0"
+          "MYENV_PERCENT": "50",
+          "MYENV_DURATION": "10"
         },
-        "stdout": "callback_stdout.log",
-        "stderr": "callback_stderr.log",
-        "cwd": "/home/chriskim/gpu-watchdog",
+        "stdout": "~/gpu-watchdog/tests/stdout.log",
+        "stderr": "~/gpu-watchdog/tests/stderr.log",
+        "cwd": "~/gpu-watchdog/tests",
         "start_new_session": true
       }
     }

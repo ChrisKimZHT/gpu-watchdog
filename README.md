@@ -223,6 +223,13 @@ GPU 规则通过 `nvidia-smi` 读取 GPU 利用率和显存使用率。`threshol
 }
 ```
 
+该规则会提供以下环境变量供回调指令使用：
+
+| 变量名                                    | 说明                            |
+| ----------------------------------------- | ------------------------------- |
+| `GPU_WATCHDOG_EXTRAENV_MATCHED_GPUS`      | GPU 规则命中的 GPU ID，逗号分隔 |
+| `GPU_WATCHDOG_EXTRAENV_MATCHED_GPU_COUNT` | GPU 规则命中的 GPU 数量         |
+
 #### 3.6. 进程规则
 
 进程规则用于检测指定 GPU 训练进程是否消失。只要 `pids` 中任意一个 PID 不再出现在 GPU 进程列表里，规则就会命中，默认事件类型为 `alert`。
@@ -245,10 +252,13 @@ GPU 规则通过 `nvidia-smi` 读取 GPU 利用率和显存使用率。`threshol
 {
   "rules": [
     {
-      "command": "echo hello world"      // 字符串形式
+      // 字符串形式
+      "command": "echo hello world"
     },
     {
-      "command": ["echo", "hello world"] // 列表形式
+      // 列表形式，在本项目中列表形式仅为方便，行为与字符串形式完全一致
+      // 实现方式：command = " ".join(command)
+      "command": ["echo", "hello world"]
     }
   ]
 }
