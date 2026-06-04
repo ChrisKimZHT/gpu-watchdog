@@ -43,7 +43,7 @@ import importlib.abc
 import importlib.machinery
 import sys
 
-# place embedded config here for real one file distribution, can be overridden by --config or ./config.json
+# place embedded config here for real one file distribution; used only when --config and ./config.json are absent; not auto reloaded
 EMBEDDED_CONFIG="""
 
 """.strip()

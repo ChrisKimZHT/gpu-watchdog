@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .callbacks import CommandRunner
 from .config import normalize_config
@@ -18,10 +18,21 @@ class Watchdog:
         self.notifier = NotificationHub.from_config(self.config)
         self.states: Dict[str, TriggerState] = {}
 
-    def run_forever(self, interval_seconds: float) -> None:
+    def reload_config(self, config: Dict[str, Any]) -> None:
+        self.config = normalize_config(config)
+        self.evaluator = RuleEvaluator(self.config)
+        self.notifier = NotificationHub.from_config(self.config)
+        active_rule_ids = {rule["id"] for rule in self.config["rules"]}
+        self.states = {rule_id: state for rule_id, state in self.states.items() if rule_id in active_rule_ids} 
+
+    def run_forever(self,config_reloader: Optional[Callable[[], Optional[Dict[str, Any]]]] = None) -> None:
         while True:
+            if config_reloader is not None:
+                config = config_reloader()
+                if config is not None: # Reload if changed.
+                    self.reload_config(config)
             self.run_once()
-            time.sleep(interval_seconds)
+            time.sleep(self.config["interval_seconds"])
 
     def run_once(self) -> None:
         now = time.time()
