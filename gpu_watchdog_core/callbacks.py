@@ -5,6 +5,8 @@ import os
 import subprocess
 from typing import Any, Dict, IO, Mapping, MutableMapping, Optional, Sequence, Union
 
+from .log import logger
+
 
 CommandValue = Union[str, Sequence[str]]
 
@@ -24,9 +26,15 @@ COMMAND_KEYS = {
 class CommandRunner:
     @staticmethod
     def run(command: Any, env: Dict[str, str]) -> None:
+        try:
+            CommandRunner._run(command, env)
+        except Exception:
+            logger.exception("Callback command failed")
+
+    @staticmethod
+    def _run(command: Any, env: Dict[str, str]) -> None:
         if not command:
             return
-
         if isinstance(command, list):  # allow list of strings for convenience, but join into a single string for subprocess
             command = " ".join(command)
 
