@@ -181,7 +181,15 @@ class RuleEvaluator:
         slots = self.gpu_notification_slots(kind, checks)
         title, body = render_rule_text(rule, GPU_TITLE_TEMPLATE, GPU_BODY_TEMPLATE, slots)
         rule_id = rule["id"]
-        yield build_result(rule, rule_id, triggered, title, body)
+        yield build_result(rule, rule_id, triggered, title, body, self.gpu_result_env(checks))
+
+    @staticmethod
+    def gpu_result_env(checks: Iterable[GpuCheck]) -> Dict[str, str]:
+        matched_gpu_ids = [check.gpu_id for check in checks if check.triggered]
+        return {
+            "GPU_WATCHDOG_EXTRAENV_MATCHED_GPUS": ",".join(matched_gpu_ids),
+            "GPU_WATCHDOG_EXTRAENV_MATCHED_GPU_COUNT": str(len(matched_gpu_ids)),
+        }
 
     @staticmethod
     def gpu_notification_slots(kind: str, checks: Iterable[GpuCheck]) -> Dict[str, Any]:

@@ -23,13 +23,13 @@ class Watchdog:
         self.evaluator = RuleEvaluator(self.config)
         self.notifier = NotificationHub.from_config(self.config)
         active_rule_ids = {rule["id"] for rule in self.config["rules"]}
-        self.states = {rule_id: state for rule_id, state in self.states.items() if rule_id in active_rule_ids} 
+        self.states = {rule_id: state for rule_id, state in self.states.items() if rule_id in active_rule_ids}
 
-    def run_forever(self,config_reloader: Optional[Callable[[], Optional[Dict[str, Any]]]] = None) -> None:
+    def run_forever(self, config_reloader: Optional[Callable[[], Optional[Dict[str, Any]]]] = None) -> None:
         while True:
             if config_reloader is not None:
                 config = config_reloader()
-                if config is not None: # Reload if changed.
+                if config is not None:  # Reload if changed.
                     self.reload_config(config)
             self.run_once()
             time.sleep(self.config["interval_seconds"])
@@ -128,12 +128,11 @@ class Watchdog:
         state.last_trigger_at = now
         if result.notify:
             self.notifier.notify(result.title, result.body, kind=result.kind)
-        CommandRunner.run(
-            result.command,
-            {
-                "GPU_WATCHDOG_RULE": result.rule_id,
-                "GPU_WATCHDOG_KIND": result.kind,
-                "GPU_WATCHDOG_TITLE": result.title,
-                "GPU_WATCHDOG_BODY": result.body,
-            },
-        )
+        event_env = {  # default env vars for callbacks
+            "GPU_WATCHDOG_RULE": result.rule_id,
+            "GPU_WATCHDOG_KIND": result.kind,
+            "GPU_WATCHDOG_TITLE": result.title,
+            "GPU_WATCHDOG_BODY": result.body,
+        }
+        event_env.update(result.env)  # add extra env vars from the result
+        CommandRunner.run(result.command, event_env)

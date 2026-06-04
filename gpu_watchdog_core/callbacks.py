@@ -27,9 +27,10 @@ class CommandRunner:
         if not command:
             return
 
-        if isinstance(command, list):
-            CommandRunner._popen(command, env=CommandRunner._child_env(env))
-        elif isinstance(command, str):
+        if isinstance(command, list):  # allow list of strings for convenience, but join into a single string for subprocess
+            command = " ".join(command)
+
+        if isinstance(command, str):
             CommandRunner._popen(command, shell=True, env=CommandRunner._child_env(env))
         elif isinstance(command, dict):
             CommandRunner._run_advanced(command, env)
@@ -46,6 +47,8 @@ class CommandRunner:
         command = config.get("command")
         if not command:
             return
+        if isinstance(command, list):  # allow list of strings for convenience, but join into a single string for subprocess
+            command = " ".join(command)
 
         child_env = CommandRunner._child_env(
             event_env,
@@ -60,13 +63,7 @@ class CommandRunner:
                 "start_new_session": bool(config.get("start_new_session", False)),
             }
             CommandRunner._add_stdio(popen_kwargs, config, stack)
-
-            if isinstance(command, list):
-                CommandRunner._popen(command, **popen_kwargs)
-            elif isinstance(command, str):
-                CommandRunner._popen(command, shell=True, **popen_kwargs)
-            else:
-                raise TypeError("command.command must be a string or a list")
+            CommandRunner._popen(command, shell=True, **popen_kwargs)
 
     @staticmethod
     def _child_env(

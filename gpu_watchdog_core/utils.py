@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .log import logger
 from .models import ResourceUsage, RuleResult
@@ -46,6 +46,7 @@ def build_result(
     triggered: bool,
     title: str,
     body: str,
+    env: Optional[Dict[str, str]] = None,
 ) -> RuleResult:
     return RuleResult(
         rule_id=rule_id,
@@ -57,4 +58,5 @@ def build_result(
         notify=rule["notify"],
         cooldown_seconds=rule["cooldown_seconds"],
         pending_period=rule["pending_period"],
+        env=env or {},
     )

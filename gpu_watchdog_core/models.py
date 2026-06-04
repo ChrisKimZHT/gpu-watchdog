@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 
 NotificationKind = Literal["alert", "reminder"]
@@ -32,3 +32,4 @@ class RuleResult:
     notify: bool
     cooldown_seconds: float
     pending_period: float
+    env: Dict[str, str]
