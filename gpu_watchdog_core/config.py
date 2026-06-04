@@ -20,6 +20,17 @@ SMTP_KEYS = {
     "ssl",
     "starttls",
 }
+COMMAND_KEYS = {
+    "command",
+    "env",
+    "env_mode",
+    "stdin",
+    "stdout",
+    "stderr",
+    "cwd",
+    "start_new_session",
+}
+COMMAND_ENV_MODES = {"merge", "replace"}
 
 DEFAULT_LOG_LEVEL = "INFO"
 DEFAULT_BARK_SERVER = "https://api.day.app"
@@ -341,4 +352,42 @@ def _validate_command(value: Any, path: str) -> None:
         return
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return
-    raise ValueError(f"{path} must be a string or a list of strings")
+    if isinstance(value, dict):
+        _validate_advanced_command(value, path)
+        return
+    raise ValueError(f"{path} must be a string, a list of strings, or an object")
+
+
+def _validate_advanced_command(command: Mapping[str, Any], path: str) -> None:
+    unknown_keys = sorted(set(command) - COMMAND_KEYS)
+    if unknown_keys:
+        joined = ", ".join(unknown_keys)
+        raise ValueError(f"{path} has unknown fields: {joined}")
+
+    inner_command = _required(command, "command", path)
+    if isinstance(inner_command, str):
+        pass
+    elif isinstance(inner_command, list) and all(isinstance(item, str) for item in inner_command):
+        pass
+    else:
+        raise ValueError(f"{path}.command must be a string or a list of strings")
+
+    if "env" in command:
+        env = _require_object(command["env"], f"{path}.env")
+        for key, value in env.items():
+            if not isinstance(key, str) or not key:
+                raise ValueError(f"{path}.env keys must be non-empty strings")
+            if value is None:
+                raise ValueError(f"{path}.env.{key} must not be null")
+
+    if "env_mode" in command:
+        env_mode = str(command["env_mode"])
+        if env_mode not in COMMAND_ENV_MODES:
+            raise ValueError(f"{path}.env_mode must be 'merge' or 'replace'")
+
+    for name in ("stdin", "stdout", "stderr", "cwd"):
+        if name in command and command[name] is not None and not isinstance(command[name], str):
+            raise ValueError(f"{path}.{name} must be a string")
+
+    if "start_new_session" in command:
+        _bool_value(command["start_new_session"], f"{path}.start_new_session")

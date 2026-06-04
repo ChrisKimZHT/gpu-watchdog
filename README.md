@@ -144,7 +144,7 @@ flowchart LR
       "notify": true,          // 是否启用通知，如果为 false 则仅执行回调
       "cooldown_seconds": 300, // [可选] 单条规则的冷却时间（秒），覆盖全局配置
       "pending_period": 60,    // [可选] 待处理时间（秒），默认为 0
-      "command": "echo \"$GPU_WATCHDOG_KIND $GPU_WATCHDOG_RULE $GPU_WATCHDOG_TITLE - $GPU_WATCHDOG_BODY\"", // [可选] 回调执行的指令，会通过环境变量透传通知的相关信息，可基于此实现更复杂的逻辑
+      "command": "echo \"$GPU_WATCHDOG_KIND $GPU_WATCHDOG_RULE $GPU_WATCHDOG_TITLE - $GPU_WATCHDOG_BODY\"", // 详情见下文回调配置
       "options": {}, // 对于不同 type 规则的特定配置项，具体见下文
       
       // 以下参数除非特殊需求不建议设置，程序会根据事件类型自动设置合理的默认值
@@ -231,5 +231,52 @@ GPU 规则通过 `nvidia-smi` 读取 GPU 利用率和显存使用率。`threshol
     "name": "training",    // [可选] 进程名称，仅用于通知展示，默认使用 PID 列表拼接
     "pids": [12345, 23456] // 需要监控的 GPU 进程 PID 列表，任意一个 PID 消失即命中
   }
+}
+```
+
+#### 3.7. 回调指令
+
+**简单用法**：适用于需求简单的场景。
+
+```jsonc
+{
+  "rules": [
+    {
+      "command": "echo hello world"      // 字符串形式
+    },
+    {
+      "command": ["echo", "hello world"] // 列表形式
+    }
+  ]
+}
+```
+
+该项目会提供以下环境变量来提供相关上下文信息，可在回调指令中利用：
+
+| 变量名               | 说明                        |
+| -------------------- | --------------------------- |
+| `GPU_WATCHDOG_KIND`  | 事件类型，如 alert/reminder |
+| `GPU_WATCHDOG_RULE`  | 规则 ID                     |
+| `GPU_WATCHDOG_TITLE` | 通知标题                    |
+| `GPU_WATCHDOG_BODY`  | 通知正文                    |
+
+**高级模式**：适合需要更复杂回调逻辑的场景，可以实现自动启动训练等复杂操作。（仍然有环境变量提供上下文信息）
+
+```jsonc
+{
+  "rules": [
+    {
+      "command": {
+        "command": ["sh", "-c", "cat"], // 实际执行的指令，string 会通过 shell 执行，list 会直接执行
+        "env": { "APP_ENV": "prod" },   // [可选] 自定义环境变量，值会转为字符串
+        "env_mode": "merge",            // [可选] merge 透传当前环境并增量覆盖；replace 只使用 GPU_WATCHDOG_* 和 env
+        "stdin": "/tmp/input.txt",      // [可选] 指定 stdin 文件
+        "stdout": "/tmp/output.log",    // [可选] 指定 stdout 文件，以追加方式写入
+        "stderr": "/tmp/error.log",     // [可选] 指定 stderr 文件，以追加方式写入
+        "cwd": "/tmp",                  // [可选] 指定工作目录
+        "start_new_session": true       // [可选] 是否以新 session 启动子进程
+      }
+    }
+  ]
 }
 ```
