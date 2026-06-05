@@ -57,6 +57,8 @@ def render_rule_text(
 class GpuCheck(NamedTuple):
     triggered: bool
     gpu_id: str
+    compute_util: float
+    memory_util: float
     metrics: List[str]
 
 
@@ -173,23 +175,36 @@ class RuleEvaluator:
         gpu_match = options["gpu_match"]
         threshold_match = options["threshold_match"]
         checks = self.gpu_checks(options, selected, kind, threshold_match)
-        if gpu_match == "all":
-            triggered = all(item[0] for item in checks)
+        idle_count = options.get("idle_count")
+        if kind == "idle" and idle_count is not None:
+            triggered = sum(1 for item in checks if item.triggered) >= idle_count
+        elif gpu_match == "all":
+            triggered = all(item.triggered for item in checks)
         else:
-            triggered = any(item[0] for item in checks)
+            triggered = any(item.triggered for item in checks)
 
         slots = self.gpu_notification_slots(kind, checks)
         title, body = render_rule_text(rule, GPU_TITLE_TEMPLATE, GPU_BODY_TEMPLATE, slots)
         rule_id = rule["id"]
-        yield build_result(rule, rule_id, triggered, title, body, self.gpu_result_env(checks))
+        yield build_result(rule, rule_id, triggered, title, body, self.gpu_result_env(checks, idle_count))
 
     @staticmethod
-    def gpu_result_env(checks: Iterable[GpuCheck]) -> Dict[str, str]:
-        matched_gpu_ids = [check.gpu_id for check in checks if check.triggered]
-        return {
+    def gpu_result_env(checks: Iterable[GpuCheck], idle_count: Any = None) -> Dict[str, str]:
+        check_list = list(checks)
+        matched_gpu_ids = [check.gpu_id for check in check_list if check.triggered]
+        env = {
             "GPU_WATCHDOG_EXTRAENV_MATCHED_GPUS": ",".join(matched_gpu_ids),
             "GPU_WATCHDOG_EXTRAENV_MATCHED_GPU_COUNT": str(len(matched_gpu_ids)),
         }
+        if idle_count is not None:
+            matched_checks = [check for check in check_list if check.triggered]
+            prefer_compute = sorted(matched_checks, key=lambda check: (check.compute_util, check.gpu_id))
+            prefer_memory = sorted(matched_checks, key=lambda check: (check.memory_util, check.gpu_id))
+            env.update({
+                "GPU_WATCHDOG_EXTRAENV_PREFER_COMPUTE_GPUS": ",".join(check.gpu_id for check in prefer_compute[:idle_count]),
+                "GPU_WATCHDOG_EXTRAENV_PREFER_MEMORY_GPUS": ",".join(check.gpu_id for check in prefer_memory[:idle_count]),
+            })
+        return env
 
     @staticmethod
     def gpu_notification_slots(kind: str, checks: Iterable[GpuCheck]) -> Dict[str, Any]:
@@ -243,7 +258,13 @@ class RuleEvaluator:
                 triggered = any(item[0] for item in metric_checks)
             else:
                 triggered = all(item[0] for item in metric_checks)
-            checks.append(GpuCheck(triggered, str(gpu.id), [item[1] for item in metric_checks]))
+            checks.append(GpuCheck(
+                triggered,
+                str(gpu.id),
+                float(gpu.gpu_util),
+                float(gpu.mem_util),
+                [item[1] for item in metric_checks],
+            ))
         return checks
 
     def evaluate_process_rule(self, rule: Dict[str, Any]) -> Iterable[RuleResult]:

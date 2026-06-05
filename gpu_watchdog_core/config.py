@@ -211,6 +211,10 @@ def _normalize_rule_options(rule_type: str, raw_options: Mapping[str, Any], path
         )
         if "gpus" in options:
             options["gpus"] = _string_list(options["gpus"], f"{options_path}.gpus")
+        if "idle_count" in options:
+            if kind != "idle":
+                raise ValueError(f"{options_path}.idle_count is only supported for idle GPU rules")
+            options["idle_count"] = _non_negative_int(options["idle_count"], f"{options_path}.idle_count")
         options["threshold"] = _normalize_gpu_thresholds(
             _required(options, "threshold", options_path),
             f"{options_path}.threshold",
@@ -284,6 +288,16 @@ def _non_negative_number(value: Any, path: str) -> float:
     if number < 0:
         raise ValueError(f"{path} must be greater than or equal to 0")
     return number
+
+
+def _non_negative_int(value: Any, path: str) -> int:
+    number = _number(value, path)
+    if not number.is_integer():
+        raise ValueError(f"{path} must be an integer")
+    integer = int(number)
+    if integer < 0:
+        raise ValueError(f"{path} must be greater than or equal to 0")
+    return integer
 
 
 def _percentage(value: Any, path: str) -> float:
