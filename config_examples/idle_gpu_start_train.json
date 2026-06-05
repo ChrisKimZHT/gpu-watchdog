@@ -27,18 +27,18 @@
       "pending_period": 10,
       "options": {
         "kind": "idle",
-        "gpu_match": "any",
+        "idle_count": "2",
         "threshold": {
           "memory": 20
         }
       },
       "command": {
         "command": [
-          "CUDA_VISIBLE_DEVICES=$GPU_WATCHDOG_EXTRAENV_MATCHED_GPUS",
+          "CUDA_VISIBLE_DEVICES=$GPU_WATCHDOG_EXTRAENV_PREFER_MEMORY_GPUS",
           "~/anaconda3/envs/pytorch/bin/python",
           "-u",
           "-m torch.distributed.run",
-          "--nproc_per_node=$GPU_WATCHDOG_EXTRAENV_MATCHED_GPU_COUNT",
+          "--nproc_per_node=2",
           "~/gpu-watchdog/tests/stress_gpu.py",
           "--compute",
           "--percent $MYENV_PERCENT",

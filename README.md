@@ -215,6 +215,7 @@ GPU 规则通过 `nvidia-smi` 读取 GPU 利用率和显存使用率。`threshol
     "gpus": ["0", "1"],       // [可选] 仅检查指定 GPU，不填则检查全部 GPU
     "gpu_match": "any",       // [可选] 显卡匹配方式，any 表示任意一张 GPU 命中即可，all 表示所有 GPU 都需命中，默认为 any
     "threshold_match": "all", // [可选] 阈值匹配方式，any 表示任意指标命中即可，all 表示所有指标都需命中；busy 默认 any，idle 默认 all
+    "idle_count": 1,          // [可选] idle 规则专用；配置后仅当 idle GPU 数量 >= 该值时触发，此时 gpu_match 不参与触发判断，并返回推荐 GPU 列表
     "threshold": {
       "compute": 5, // [可选] GPU 计算利用率阈值，取值 0-100
       "memory": 5   // [可选] GPU 显存使用率阈值，取值 0-100
@@ -225,10 +226,12 @@ GPU 规则通过 `nvidia-smi` 读取 GPU 利用率和显存使用率。`threshol
 
 该规则会提供以下环境变量供回调指令使用：
 
-| 变量名                                    | 说明                            |
-| ----------------------------------------- | ------------------------------- |
-| `GPU_WATCHDOG_EXTRAENV_MATCHED_GPUS`      | GPU 规则命中的 GPU ID，逗号分隔 |
-| `GPU_WATCHDOG_EXTRAENV_MATCHED_GPU_COUNT` | GPU 规则命中的 GPU 数量         |
+| 变量名                                      | 说明                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `GPU_WATCHDOG_EXTRAENV_MATCHED_GPUS`        | GPU 规则命中的 GPU ID，逗号分隔                                                                   |
+| `GPU_WATCHDOG_EXTRAENV_MATCHED_GPU_COUNT`   | GPU 规则命中的 GPU 数量                                                                           |
+| `GPU_WATCHDOG_EXTRAENV_PREFER_COMPUTE_GPUS` | 配置 `idle_count` 时返回；从命中的 idle GPU 中选择计算占用最少的 `idle_count` 个 GPU ID，逗号分隔 |
+| `GPU_WATCHDOG_EXTRAENV_PREFER_MEMORY_GPUS`  | 配置 `idle_count` 时返回；从命中的 idle GPU 中选择显存占用最少的 `idle_count` 个 GPU ID，逗号分隔 |
 
 #### 3.6. 进程规则
 
