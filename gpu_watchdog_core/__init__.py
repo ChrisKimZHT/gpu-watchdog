@@ -1,6 +1,6 @@
 """Core modules for GPU Watchdog."""
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 from .watchdog import Watchdog
 
