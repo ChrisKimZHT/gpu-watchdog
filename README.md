@@ -30,7 +30,7 @@ python3 gpu_watchdog.py --config config_examples/crash_notification.json
 
 ### 单文件用法
 
-在 Linux 环境下使用脚本 `./build.sh` 构建生成单文件，生成结果储在 `dist/gpu_watchdog.py`，单文件的用法和正常版本完全一致。
+直接在 GitHub Releases 下载单文件。或在 Linux 环境下使用脚本 `./build.sh` 构建生成单文件，生成结果在 `dist/gpu_watchdog.py`。单文件的用法和正常版本完全一致。
 
 单文件支持嵌入配置文件，以实现真正的一个 `.py` 文件直接运行，在生成的单文件顶部找到 `EMBEDDED_CONFIG` 参数，把 `config.json` 内容粘贴进去即可。
 
