@@ -105,8 +105,8 @@ class ResourceSampler:
             raise RuntimeError(f"disk total is zero for {mount_point}")
         return ResourceUsage(
             total=float(usage.total),
-            used=float(usage.used),
-            percent=usage.used / usage.total * 100.0,
+            used=float(usage.total - usage.free),
+            percent=(1.0 - usage.free / usage.total) * 100.0,
         )
 
     @staticmethod
